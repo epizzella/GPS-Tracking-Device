@@ -1,2 +1,2 @@
 # GPS-Tracking-Device
-GPS tracking device intended to be used with automotive applications.
+GPS tracking device for my old Jeep.

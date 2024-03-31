@@ -1,0 +1,24 @@
+{
+    "configurations": [
+        {
+            "name": "arm-none-eabi",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "${workspaceFolder}/Core/Inc",
+                "${workspaceFolder}/Drivers/STM32F1xx_HAL_Driver/Inc"
+            ],
+            "defines": [
+                "_DEBUG",
+                "UNICODE",
+                "_UNICODE",
+                "USE_HAL_DRIVER",
+                "STM32F103xB"
+            ],
+            "compilerPath": "C:/dev_tools/gcc-arm-11.2-2022.02-mingw-w64-i686-arm-none-eabi/bin/arm-none-eabi-g++.exe",
+            "cppStandard": "c++17",
+            "intelliSenseMode": "windows-gcc-arm",
+            "cStandard": "c17"
+        }
+    ],
+    "version": 4
+}
