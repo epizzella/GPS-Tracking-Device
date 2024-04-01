@@ -4,8 +4,6 @@
             "name": "arm-none-eabi",
             "includePath": [
                 "${workspaceFolder}/**",
-                "${workspaceFolder}/Core/Inc",
-                "${workspaceFolder}/Drivers/STM32F1xx_HAL_Driver/Inc"
             ],
             "defines": [
                 "_DEBUG",
@@ -16,8 +14,8 @@
             ],
             "compilerPath": "C:/dev_tools/gcc-arm-11.2-2022.02-mingw-w64-i686-arm-none-eabi/bin/arm-none-eabi-g++.exe",
             "cppStandard": "c++17",
-            "intelliSenseMode": "windows-gcc-arm",
-            "cStandard": "c17"
+            "cStandard": "c17",
+            "intelliSenseMode": "windows-gcc-arm"
         }
     ],
     "version": 4

@@ -22,6 +22,21 @@
 
 void SystemClock_Config(void);
 
+uint8_t recieveBuffer[1];
+
+/*
+void myCallback(UART_HandleTypeDef *huart) {
+  //HAL_UART_Transmit_IT(huart, recieveBuffer, sizeof(recieveBuffer));
+  HAL_UART_Transmit(huart, recieveBuffer, sizeof(recieveBuffer), 10);
+}
+*/
+
+
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
+  HAL_UART_Transmit_IT(huart, recieveBuffer, sizeof(recieveBuffer));
+  HAL_UART_Receive_IT(&huart2, recieveBuffer, sizeof(recieveBuffer));
+}
+
 /**
   * @brief  The application entry point.
   * @retval int
@@ -38,10 +53,22 @@ int main(void)
   MX_TIM4_Init();
   MX_USART3_UART_Init();
 
+  //HAL_UART_RegisterCallback(&huart2, HAL_UART_RX_COMPLETE_CB_ID, &myCallback);
+
+  if (HAL_UART_Receive_IT(&huart2, recieveBuffer, sizeof(recieveBuffer)) == HAL_OK)
+  {
+    uint8_t txtBuff[30] = "Rx IT Ok\n\r";
+    HAL_UART_Transmit(&huart2, txtBuff, sizeof(txtBuff), 100);
+  }
+  else
+  {
+    uint8_t txtBuff[30] = "Rx IT Failed\n\r";
+    HAL_UART_Transmit(&huart2, txtBuff, sizeof(txtBuff), 100);
+  }
+
   while (1)
   {
     HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
-
     HAL_Delay(1000);
   }
 }
@@ -95,6 +122,7 @@ void Error_Handler(void)
   __disable_irq();
   while (1)
   {
+    __asm__("BKPT");
   }
   /* USER CODE END Error_Handler_Debug */
 }

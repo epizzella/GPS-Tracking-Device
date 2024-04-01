@@ -37,9 +37,6 @@ extern "C" {
   * @{
   */
 
-/* Private types -------------------------------------------------------------*/
-/* Private variables ---------------------------------------------------------*/
-
 /* Private constants ---------------------------------------------------------*/
 /** @defgroup USART_LL_Private_Constants USART Private Constants
   * @{

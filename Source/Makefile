@@ -1,4 +1,4 @@
-FILE_NAME = JeepPS-Tracker
+FILE_NAME = JeepPS
 
 # debug build?
 DEBUG = 1
@@ -96,39 +96,45 @@ vpath %.cpp $(sort $(dir $(CXX_SOURCES)))
 vpath %.c $(sort $(dir $(C_SOURCES)))
 vpath %.s $(sort $(dir $(ASM_SOURCES)))
 
--include $(wildcard $(BUILD_DIR)/$(OBJ_DIR)/*.d)
-
 # default action: build all
 .PHONY: all
 all: $(BUILD_DIR)/$(FILE_NAME).elf $(BUILD_DIR)/$(FILE_NAME).hex $(BUILD_DIR)/$(FILE_NAME).bin
 
+-include $(wildcard $(BUILD_DIR)/$(OBJ_DIR)/*.d)
+
 $(BUILD_DIR)/$(OBJ_DIR)/%.o: %.cpp Makefile | $(BUILD_DIR)/$(OBJ_DIR)
-	$(CC) -c $(CXXFLAGS) -Wa,-a,-ad,-alms=$(BUILD_DIR)/$(OBJ_DIR)/$(notdir $(<:.cpp=.lst)) $< -o $@
+	@echo $<
+	@$(CC) -c $(CXXFLAGS) -Wa,-a,-ad,-alms=$(BUILD_DIR)/$(OBJ_DIR)/$(notdir $(<:.cpp=.lst)) $< -o $@
 
 $(BUILD_DIR)/$(OBJ_DIR)/%.o: %.c Makefile | $(BUILD_DIR)/$(OBJ_DIR)
-	$(CC) -c $(CXXFLAGS) -Wa,-a,-ad,-alms=$(BUILD_DIR)/$(OBJ_DIR)/$(notdir $(<:.c=.lst)) $< -o $@
+	@echo $<
+	@$(CC) -c $(CXXFLAGS) -Wa,-a,-ad,-alms=$(BUILD_DIR)/$(OBJ_DIR)/$(notdir $(<:.c=.lst)) $< -o $@
 
 $(BUILD_DIR)/$(OBJ_DIR)/%.o: %.s Makefile | $(BUILD_DIR)/$(OBJ_DIR)
-	$(AS) -c $(CXXFLAGS) $< -o $@
+	@echo $<
+	@$(AS) -c $(CXXFLAGS) $< -o $@
 
 $(BUILD_DIR)/$(FILE_NAME).elf: $(OBJECTS) Makefile
-	$(CC) $(OBJECTS) $(LDFLAGS) -o $@
+	@$(CC) $(OBJECTS) $(LDFLAGS) -o $@
 	$(SZ) $@
 
 #Build hex file
-$(BUILD_DIR)/%.hex: $(BUILD_DIR)/%.elf | $(BUILD_DIR)
-	$(HEX) $< $@
+$(BUILD_DIR)/%.hex: $(BUILD_DIR)/%.elf
+	@$(HEX) $< $@
 	$(SZ) $@
 
 #Build bin
-$(BUILD_DIR)/%.bin: $(BUILD_DIR)/%.elf | $(BUILD_DIR)
-	$(BIN) $< $@	
+$(BUILD_DIR)/%.bin: $(BUILD_DIR)/%.elf
+	@$(BIN) $< $@
 
 .PHONY: hex
 hex: $(BUILD_DIR)/$(FILE_NAME).hex
 
+.PHONY: elf
+elf: $(BUILD_DIR)/$(FILE_NAME).elf
+
 # Make obj directory dir
-$(BUILD_DIR)/$(OBJ_DIR): $(BUILD_DIR)
+$(BUILD_DIR)/$(OBJ_DIR): | $(BUILD_DIR)
 	mkdir $(BUILD_DIR)\$(OBJ_DIR)
 
 # Make build directory dir

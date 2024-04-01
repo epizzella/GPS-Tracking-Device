@@ -47,7 +47,7 @@ void HardFault_Handler(void)
 {
   while (1)
   {
-
+    __asm__("BKPT");
   }
 }
 
@@ -58,7 +58,7 @@ void MemManage_Handler(void)
 {
   while (1)
   {
-
+    __asm__("BKPT");
   }
 }
 
@@ -69,7 +69,7 @@ void BusFault_Handler(void)
 {
   while (1)
   {
-
+    __asm__("BKPT");
   }
 }
 
@@ -80,7 +80,7 @@ void UsageFault_Handler(void)
 {
   while (1)
   {
-
+    __asm__("BKPT");
   }
 }
 
