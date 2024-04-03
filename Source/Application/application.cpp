@@ -1,0 +1,6 @@
+
+
+void application_main()
+{
+
+}

@@ -6,13 +6,15 @@ DEBUG = 1
 OPT = -Og
 
 #Directory variables 
+APP_DIR := Application
 CORE_DIR := Core
 DRIVERS_DIR := Drivers
 MODULES_DIR := Modules
 BUILD_DIR := Build
 OBJ_DIR := obj
 
-DIR_LST = $(sort $(dir $(wildcard $(CORE_DIR)/*/)))
+DIR_LST = $(sort $(dir $(wildcard $(APP_DIR)/*/)))
+DIR_LST += $(sort $(dir $(wildcard $(CORE_DIR)/*/)))
 DIR_LST += $(sort $(dir $(wildcard $(DRIVERS_DIR)/*/)))
 DIR_LST += $(sort $(dir $(wildcard $(DRIVERS_DIR)/*/*/)))
 DIR_LST += $(sort $(dir $(wildcard $(MODULES_DIR)/*/)))
@@ -140,6 +142,11 @@ $(BUILD_DIR)/$(OBJ_DIR): | $(BUILD_DIR)
 # Make build directory dir
 $(BUILD_DIR):
 	mkdir $@
+
+#Show list of folders that are searched for files
+.PHONY: dir_list
+dir_list: 
+	@echo $(DIR_LST)
 
 # Clean
 .PHONY: clean

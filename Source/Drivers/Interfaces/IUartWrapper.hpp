@@ -11,10 +11,10 @@ enum class UartStatus
     TIMEOUT
 };
 
+using ReceiverPtr = void (*)();
+
 class IUartWrapper {
 public:
-    using ReceiverPtr = void (*)(const uint8_t *pData, uint16_t size);
-
     /**
      * @brief Non blocking write.
      * @param pData Pointer to data to write.
@@ -29,13 +29,6 @@ public:
      * @return UartStatus
      */
     virtual UartStatus beginRead(uint8_t *pData, uint16_t size) = 0;
-
-    /**
-     * @brief Register a callback for nonblocking read completion.
-     * @warning This function is called from the uart ISR.
-     * @param receiver The callback function.
-     */
-    virtual void RegisterReceiver(ReceiverPtr receiver) = 0;
 
     /**
      * @brief Blocking write
@@ -54,6 +47,18 @@ public:
      * @return UartStatus 
      */
     virtual UartStatus readBlocking(uint8_t *pData, uint16_t size, uint32_t timeout) = 0;
+
+    /**
+     * @brief Register a callback for nonblocking read completion.
+     * @warning This function is called from the uart ISR.
+     * @param receiver The callback function.
+     */
+    virtual void RegisterReceiver(ReceiverPtr receiver) = 0;
+
+    /**
+     * @brief Unregisters uart callback.
+     */
+    virtual void UnregisterReceiver() = 0;
 };
 
 #endif
