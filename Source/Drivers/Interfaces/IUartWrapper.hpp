@@ -13,7 +13,8 @@ enum class UartStatus
 
 using ReceiverPtr = void (*)();
 
-class IUartWrapper {
+class IUartWrapper
+{
 public:
     /**
      * @brief Non blocking write.
@@ -35,7 +36,7 @@ public:
      * @param pData Pointer to data the to write.
      * @param size The amount of data to write in bytes.
      * @param timeout The timeout.
-     * @return UartStatus 
+     * @return UartStatus
      */
     virtual UartStatus writeBlocking(const uint8_t *pData, uint16_t size, uint32_t timeout) = 0;
 
@@ -44,7 +45,7 @@ public:
      * @param pData Pointer to the receiving data buffer.
      * @param size The amount of data to write in bytes.
      * @param timeout The timeout.
-     * @return UartStatus 
+     * @return UartStatus
      */
     virtual UartStatus readBlocking(uint8_t *pData, uint16_t size, uint32_t timeout) = 0;
 

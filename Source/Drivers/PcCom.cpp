@@ -26,7 +26,7 @@ UartStatus PcCom::readBlocking(uint8_t *pData, uint16_t size, uint32_t timeout)
 void PcCom::RegisterReceiver(ReceiverPtr receiver)
 {
     m_receiver = receiver;
-    HAL_UART_RegisterCallback(&huart2, HAL_UART_RX_COMPLETE_CB_ID, m_rxCallback);
+    HAL_UART_RegisterCallback(&huart2, HAL_UART_RX_COMPLETE_CB_ID, rxCallback);
 }
 
 void PcCom::UnregisterReceiver()
@@ -35,7 +35,7 @@ void PcCom::UnregisterReceiver()
     HAL_UART_UnRegisterCallback(&huart2, HAL_UART_RX_COMPLETE_CB_ID);
 }
 
-void PcCom::m_rxCallback(UART_HandleTypeDef *huart)
+void PcCom::rxCallback(UART_HandleTypeDef *huart)
 {
     m_receiver();
 }

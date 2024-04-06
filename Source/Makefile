@@ -10,15 +10,17 @@ APP_DIR := Application
 CORE_DIR := Core
 DRIVERS_DIR := Drivers
 MODULES_DIR := Modules
+
 BUILD_DIR := Build
 OBJ_DIR := obj
 
-DIR_LST = $(sort $(dir $(wildcard $(APP_DIR)/*/)))
+DIR_LST =  $(sort $(dir $(wildcard $(APP_DIR)/*/)))
 DIR_LST += $(sort $(dir $(wildcard $(CORE_DIR)/*/)))
-DIR_LST += $(sort $(dir $(wildcard $(DRIVERS_DIR)/*/)))
+DIR_LST += $(sort $(dir $(DRIVERS_DIR)/))
 DIR_LST += $(sort $(dir $(wildcard $(DRIVERS_DIR)/*/*/)))
-DIR_LST += $(sort $(dir $(wildcard $(MODULES_DIR)/*/)))
-DIR_LST += $(sort $(dir $(wildcard $(MODULES_DIR)/*/*/)))
+DIR_LST += $(sort $(dir $(MODULES_DIR)/))
+DIR_LST += $(sort $(dir $(wildcard $(MODULES_DIR)/*/*)))
+
 
 # Project sources.
 C_SOURCES += $(foreach dir, $(DIR_LST), $(wildcard $(dir)*.c))

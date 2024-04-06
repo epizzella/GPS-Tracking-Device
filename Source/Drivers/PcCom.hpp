@@ -17,7 +17,7 @@ public:
 
 private:
     static ReceiverPtr m_receiver;
-    static void m_rxCallback(UART_HandleTypeDef *huart);
+    static void rxCallback(UART_HandleTypeDef *huart);
     static const uint16_t m_rxBuffSize = 50;
     static const uint16_t m_buffNum = 5;
     uint8_t m_rxBuffer[m_buffNum][m_rxBuffSize] = {};

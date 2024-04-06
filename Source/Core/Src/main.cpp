@@ -21,19 +21,8 @@
 #include "gpio.h"
 
 #include "application.hpp"
-#include "PcCom.hpp"
 
 void SystemClock_Config(void);
-uint8_t recieveBuffer[1];
-
-uint8_t rx_buffer[1];
-uint8_t tx_buffer[10] = "PcCom Go!";
-
-PcCom pcCom = PcCom();
-void callback()
-{
-  pcCom.writeBlocking(tx_buffer, sizeof(tx_buffer), 100);
-}
 
 int main(void)
 {
@@ -47,8 +36,7 @@ int main(void)
   MX_TIM4_Init();
   MX_USART3_UART_Init();
 
-  pcCom.RegisterReceiver(callback);
-  pcCom.beginRead(rx_buffer, sizeof(rx_buffer));
+  application_main();
 
   while (1)
   {
@@ -56,7 +44,6 @@ int main(void)
     HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
     HAL_Delay(250);
   }
-  
 }
 
 /**
