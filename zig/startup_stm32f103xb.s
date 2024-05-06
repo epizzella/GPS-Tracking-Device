@@ -55,13 +55,10 @@ defined in linker script */
  * @retval : None
 */
 
-  .section .text._start
-  .weak _start
-  .type _start, %function
-_start:
-
-/* Call the clock system initialization function.*/
-/*    bl  SystemInit */
+  .section .text.Reset_Handler
+  .weak Reset_Handler
+  .type Reset_Handler, %function
+Reset_Handler:
 
 /* Copy the data segment initializers from flash to SRAM */
   ldr r0, =_sdata
@@ -94,8 +91,6 @@ LoopFillZerobss:
   cmp r2, r4
   bcc FillZerobss
 
-/* Call static constructors */
-/*    bl __libc_init_array   */
 /* Call the application's entry point.*/
   bl main
   bx lr

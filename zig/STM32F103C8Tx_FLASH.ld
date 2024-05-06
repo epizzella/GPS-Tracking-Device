@@ -49,18 +49,18 @@
 *****************************************************************************
 */
 
-/* Specify the memory areas */
+/* Entry Point */
+ENTRY(Reset_Handler)
+
 MEMORY
 {
-RAM (xrw)      : ORIGIN = 0x20000000, LENGTH = 20K
-FLASH (rx)      : ORIGIN = 0x8000000, LENGTH = 64K
+  FLASH (rx)  : ORIGIN = 0x08000000, LENGTH = 64K
+  RAM   (rwx) : ORIGIN = 0x20000000, LENGTH = 20K
 }
-
-/* Entry Point */
-ENTRY(_start)
 
 /* Highest address of the user mode stack */
 _estack = ORIGIN(RAM) + LENGTH(RAM);    /* end of RAM */
+
 /* Generate a link error if heap and stack don't fit into RAM */
 _Min_Heap_Size = 0x200;      /* required amount of heap  */
 _Min_Stack_Size = 0x400; /* required amount of stack */
@@ -162,19 +162,6 @@ SECTIONS
     __bss_end__ = _ebss;
   } >RAM
 
-  /* User_heap_stack section, used to check that there is enough RAM left */
-  ._user_heap_stack :
-  {
-    . = ALIGN(8);
-    PROVIDE ( end = . );
-    PROVIDE ( _end = . );
-    . = . + _Min_Heap_Size;
-    . = . + _Min_Stack_Size;
-    . = ALIGN(8);
-  } >RAM
-
-  
-
   /* Remove information from the standard libraries */
   /DISCARD/ :
   {
@@ -185,5 +172,3 @@ SECTIONS
 
   .ARM.attributes 0 : { *(.ARM.attributes) }
 }
-
-

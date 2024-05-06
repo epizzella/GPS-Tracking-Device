@@ -1,8 +1,5 @@
 FROM ubuntu:24.04
 
-#docker run -v /home/fixer/git/GPS-Tracking-Device:/repo -t zigdev:v1
-#zig build-exe -target thumb-freestanding -mcpu cortex_m3 --name application.elf --script STM32F103C8Tx_FLASH.ld startup_stm32f103xb.s main.zig
-
 RUN apt update
 RUN apt -y install xz-utils 
 
@@ -10,7 +7,8 @@ ARG workdir=work
 
 WORKDIR /${workdir}
 
-#The version of zig to install.  Needs to match the filename from https://ziglang.org/download/
+#zig v0.12.0
+#Needs to match the filename from https://ziglang.org/download/
 ARG zig=zig-linux-x86_64-0.12.0
 
 #Download and install zig directly from the website
@@ -36,3 +34,12 @@ RUN openocd --version
 RUN apt -y install gdb-multiarch
 RUN gdb --version
 
+#Use st link to program/ debug
+RUN apt -y install stlink-tools
+
+EXPOSE 4444
+EXPOSE 3333
+
+#docker build -t zigdev:v1
+#docker run --name docker-zig -v /home/fixer/git/GPS-Tracking-Device:/repo --privileged -v /dev/bus/usb:/dev/bus/usb -t zigdev:v1
+#docker run --name docker-zig -v /home/fixer/git/GPS-Tracking-Device:/repo --privileged -v /dev:/dev -t zigdev:v1
