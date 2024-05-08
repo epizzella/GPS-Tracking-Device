@@ -1,15 +1,27 @@
-pub const RCC_APB2ENR: *u32 = @ptrFromInt(0x40021018);
-pub const GPIOC_CRH: *u32 = @ptrFromInt(0x40011004);
-pub const GPIOC_ODR: *u32 = @ptrFromInt(0x4001100C);
+const stm32 = @cImport({
+    //STM32F103xB is defined here to silence the zls error, however the program builds fine without it
+    //since it is also defined in the zig.build where it is required.
+    @cDefine("STM32F103xB", "");
+    @cInclude("stm32f1xx_hal.h");
+    @cInclude("clock.h");
+    @cInclude("tim.h");
+    @cInclude("usart.h");
+    @cInclude("gpio.h");
+});
 
 export fn main() void {
-    RCC_APB2ENR.* |= @as(u32, 0x10); // Enable GPIOC clkGPIOC_CRH.* &= ~@as(u32, 0b1111 << 20);  // Clear all the bits relative to PC13
-    GPIOC_CRH.* |= @as(u32, 0b0010 << 20); // Now set the desired configuration: Out PP, 2MHz
+    _ = stm32.HAL_Init();
+
+    _ = stm32.SystemClock_Config();
+
+    _ = stm32.MX_GPIO_Init();
+    _ = stm32.MX_USART2_UART_Init();
+    _ = stm32.MX_USART3_UART_Init();
+    _ = stm32.MX_TIM3_Init();
+    _ = stm32.MX_TIM4_Init();
+
     while (true) {
-        var i: u32 = 0;
-        GPIOC_ODR.* ^= @as(u32, 0x2000); // Toggle the bit corresponding to GPIOC13
-        while (i < 100_000) { // Wait a bit
-            i += 1;
-        }
+        stm32.HAL_GPIO_TogglePin(stm32.GPIOC, stm32.GPIO_PIN_13);
+        stm32.HAL_Delay(250);
     }
 }

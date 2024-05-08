@@ -102,7 +102,10 @@ SECTIONS
     . = ALIGN(4);
   } >FLASH
 
-  .ARM.extab   : { *(.ARM.extab* .gnu.linkonce.armextab.*) } >FLASH
+  .ARM.extab : { 
+    *(.ARM.extab* .gnu.linkonce.armextab.*)
+  } >FLASH
+
   .ARM : {
     __exidx_start = .;
     *(.ARM.exidx*)
