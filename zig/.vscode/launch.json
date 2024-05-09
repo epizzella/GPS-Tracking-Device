@@ -7,12 +7,11 @@
         {
             "name": "Cortex Debug",
             "cwd": "${workspaceFolder}",
-            "executable": "./zig-out/bin/gps.elf",
+            "executable": "./bin/gps.elf",
             "request": "launch",
             "type": "cortex-debug",
             "runToEntryPoint": "main",
             "servertype": "openocd",
-            //"runToEntryPoint": "main",
             "device": "STM32f103C8",
             "interface": "swd",
             "configFiles": 

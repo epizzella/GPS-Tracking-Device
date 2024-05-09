@@ -9,11 +9,11 @@ const stm32 = @cImport({
     @cInclude("gpio.h");
 });
 
+const zuart = @import("Zwrapper/uart_wrapper.zig");
+
 export fn main() void {
     _ = stm32.HAL_Init();
-
     _ = stm32.SystemClock_Config();
-
     _ = stm32.MX_GPIO_Init();
     _ = stm32.MX_USART2_UART_Init();
     _ = stm32.MX_USART3_UART_Init();

@@ -24,17 +24,17 @@ pub fn build(b: *std.Build) void {
         .os_tag = .freestanding,
     });
 
-    const output_dir = "bin/";
+    const output_dir = "Bin/";
     b.exe_dir = output_dir;
 
     //Releasesmall generates an elf thats missing the entire symbol table for some reason
     //Debug fails to build because it won't fit into flash
     //Releasesafe and Releasefast both generate elf files that have symbol tables and fit into flash
-    const optimize = std.builtin.OptimizeMode.ReleaseSafe;
+    const optimize = std.builtin.OptimizeMode.ReleaseFast;
 
     const elf = b.addExecutable(.{
         .name = prj_name ++ ".elf",
-        .root_source_file = b.path("src/main.zig"),
+        .root_source_file = b.path("main.zig"),
         .target = target,
         .optimize = optimize,
     });
