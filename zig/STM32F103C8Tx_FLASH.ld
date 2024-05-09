@@ -4,7 +4,7 @@
 
 **  File        : LinkerScript.ld
 **
-**  Author		: STM32CubeMX
+**  Author      : STM32CubeMX
 **
 **  Abstract    : Linker script for STM32F103C8Tx series
 **                64Kbytes FLASH and 20Kbytes RAM
@@ -163,6 +163,17 @@ SECTIONS
     . = ALIGN(4);
     _ebss = .;         /* define a global symbol at bss end */
     __bss_end__ = _ebss;
+  } >RAM
+
+    /* User_heap_stack section, used to check that there is enough RAM left */
+  ._user_heap_stack (NOLOAD) :
+  {
+    . = ALIGN(8);
+    PROVIDE ( end = . );
+    PROVIDE ( _end = . );
+    . = . + _Min_Heap_Size;
+    . = . + _Min_Stack_Size;
+    . = ALIGN(8);
   } >RAM
 
   /* Remove information from the standard libraries */
