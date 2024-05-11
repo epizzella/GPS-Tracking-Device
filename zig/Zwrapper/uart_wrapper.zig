@@ -1,52 +1,35 @@
-const uart_hal = @cImport("stm32f1xx_hal_uart.h");
+const hal = @import("hal_include.zig");
 
 /// ZUart is zig wrapper for a C implemntation of a uart driver.
 pub const ZUart = struct {
-    /// Init the struct with a uart handle.  Must be called before any other functions
-    ///
-    /// uart_handle: pointer to the uart mem mapped peripheral
-    pub fn init(uart_handle: *uart_hal.UART_HandleTypeDef) void {
-        m_uart_handle = uart_handle;
-    }
+    m_uart_handle: *hal.stm32.UART_HandleTypeDef,
 
     /// Non blocking write.
     ///
     /// data: slice of data to write.
-    pub fn write(data: []u8) !void {
-        const rsp = uart_hal.HAL_UART_Transmit_IT(&m_uart_handle, data.ptr, data.len);
-        if (rsp > 0) {
-            return error{};
-        }
+    pub fn write(self: *ZUart, data: []const u8) void {
+        _ = hal.stm32.HAL_UART_Transmit_IT(self.m_uart_handle, data.ptr, data.len);
     }
 
     /// Starts a non blocking read.
     ///
     /// data: slice of the receiving data buffer.
-    pub fn beginRead(data: []u8) error{WriteError} {
-        const rsp = uart_hal.HAL_UART_Receive_IT(&m_uart_handle, data.ptr, data.len);
-        if (rsp > 0) {
-            return error{};
-        }
+    pub fn beginRead(self: *ZUart, data: []const u8) void {
+        _ = hal.stm32.HAL_UART_Receive_IT(self.m_uart_handle, data.ptr, data.len);
     }
 
     /// Blocking write.
     ///
     /// data: slice of data to write; timeout: in milliseconds
-    pub fn writeBlocking(data: []u8, timeout: u32) error{WriteError} {
-        const rsp = uart_hal.HAL_UART_Transmit(&m_uart_handle, data.ptr, data.len, timeout);
-        if (rsp > 0) {
-            return error{};
-        }
+    pub fn writeBlocking(self: *ZUart, data: []const u8, timeout: u32) void {
+        _ = hal.stm32.HAL_UART_Transmit(self.m_uart_handle, data.ptr, @intCast(data.len), timeout);
     }
 
     /// Blocking read.
     ///
     /// data: slice of the receiving data buffer; timeout: in milliseconds
-    pub fn readBlocking(data: []u8, timeout: u32) error{WriteError} {
-        const rsp = uart_hal.readBlocking(&m_uart_handle, data.ptr, data.len, timeout);
-        if (rsp > 0) {
-            return error{};
-        }
+    pub fn readBlocking(self: *ZUart, data: []const u8, timeout: u32) void {
+        _ = hal.stm32.readBlocking(self.m_uart_handle, data.ptr, data.len, timeout);
     }
 
     /// Register a callback for nonblocking read completion.
@@ -54,14 +37,12 @@ pub const ZUart = struct {
     /// receiverPtr: The callback function.
     ///
     /// WARNING! receiverPtr function will be called from the uart ISR.
-    pub fn registerReceiver(receiverPtr: *u8) void {
-        uart_hal.HAL_UART_RegisterCallback(&m_uart_handle, uart_hal.HAL_UART_RX_COMPLETE_CB_ID, receiverPtr);
+    pub fn registerReceiver(self: *ZUart, receiverPtr: *u8) void {
+        hal.stm32.HAL_UART_RegisterCallback(self.m_uart_handle, hal.stm32.HAL_UART_RX_COMPLETE_CB_ID, receiverPtr);
     }
 
     /// Unregisters uart callback.
-    pub fn unregisterReceiver() void {
-        uart_hal.HAL_UART_UnRegisterCallback(&m_uart_handle, uart_hal.HAL_UART_RX_COMPLETE_CB_ID);
+    pub fn unregisterReceiver(self: *ZUart) void {
+        hal.stm32.HAL_UART_UnRegisterCallback(self.m_uart_handle, hal.stm32.HAL_UART_RX_COMPLETE_CB_ID);
     }
-
-    var m_uart_handle: *uart_hal.UART_HandleTypeDef = undefined;
 };

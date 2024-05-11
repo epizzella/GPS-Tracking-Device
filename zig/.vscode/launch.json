@@ -7,7 +7,7 @@
         {
             "name": "Cortex Debug",
             "cwd": "${workspaceFolder}",
-            "executable": "./bin/gps.elf",
+            "executable": "./Bin/gps.elf",
             "request": "launch",
             "type": "cortex-debug",
             "runToEntryPoint": "main",

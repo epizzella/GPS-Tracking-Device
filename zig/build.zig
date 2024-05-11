@@ -10,7 +10,7 @@ pub fn build(b: *std.Build) void {
         const min_zig = std.SemanticVersion.parse(required_zig) catch unreachable;
         if (current_zig.order(min_zig) == .lt) {
             const error_message =
-                \\Attempting to compile with an older version of zig. This project requires development build {}
+                \\Attempting to compile with an older version of zig. This project requires build {}
             ;
             @compileError(std.fmt.comptimePrint(error_message, .{min_zig}));
         }
@@ -50,7 +50,7 @@ pub fn build(b: *std.Build) void {
 
     const c_flags = [_][]const u8{
         "-g3", //max debug symbols
-        //"-O1", //minor optimizations
+        "-O1", //minor optimizations
         "-Wall", //This enables all the warnings about constructions that some users consider questionable, and that are easy to avoid, even in conjunction with macros.
         "-Wextra", //This enables some extra warning flags that are not enabled by -Wall.
         "-mthumb", //Requests that the compiler targets the thumb instruction set.
