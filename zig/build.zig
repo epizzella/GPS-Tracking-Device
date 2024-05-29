@@ -28,15 +28,17 @@ pub fn build(b: *std.Build) void {
     b.exe_dir = output_dir;
 
     //Releasesmall generates an elf thats missing the entire symbol table for some reason
-    //Debug fails to build because it won't fit into flash
     //Releasesafe and Releasefast both generate elf files that have symbol tables and fit into flash
-    const optimize = std.builtin.OptimizeMode.ReleaseFast;
+    const optimize = std.builtin.OptimizeMode.ReleaseSafe;
 
     const elf = b.addExecutable(.{
         .name = prj_name ++ ".elf",
         .root_source_file = b.path("main.zig"),
         .target = target,
         .optimize = optimize,
+        .single_threaded = true,
+        .link_libc = false,
+        .linkage = .static,
     });
 
     //#defines for STM32 HAL
@@ -98,6 +100,24 @@ pub fn build(b: *std.Build) void {
         "Drivers/STM32F1xx_HAL_Driver/Inc/",
         "Drivers/STM32F1xx_HAL_Driver/Inc/Legacy/",
     };
+
+    const arm_gcc_path = "/home/fixer/arm-gcc";
+    // Manually including libraries bundled with arm-none-eabi-gcc
+    elf.addLibraryPath(.{ .path = b.fmt("{s}/arm-none-eabi/lib/thumb/v7/nofp", .{arm_gcc_path}) });
+    elf.addLibraryPath(.{ .path = b.fmt("{s}/lib/gcc/arm-none-eabi/10.3.1/thumb/v7/nofp", .{arm_gcc_path}) });
+    elf.addSystemIncludePath(.{ .path = b.fmt("{s}/arm-none-eabi/include", .{arm_gcc_path}) });
+    elf.linkSystemLibrary("c_nano");
+    elf.linkSystemLibrary("m");
+
+    // Manually include C runtime objects bundled with arm-none-eabi-gcc
+    elf.addObjectFile(.{ .path = b.fmt("{s}/arm-none-eabi/lib/thumb/v7/nofp/crt0.o", .{arm_gcc_path}) });
+    elf.addObjectFile(.{ .path = b.fmt("{s}/lib/gcc/arm-none-eabi/10.3.1/thumb/v7/nofp/crti.o", .{arm_gcc_path}) });
+    elf.addObjectFile(.{ .path = b.fmt("{s}/lib/gcc/arm-none-eabi/10.3.1/thumb/v7/nofp/crtbegin.o", .{arm_gcc_path}) });
+    elf.addObjectFile(.{ .path = b.fmt("{s}/lib/gcc/arm-none-eabi/10.3.1/thumb/v7/nofp/crtend.o", .{arm_gcc_path}) });
+    elf.addObjectFile(.{ .path = b.fmt("{s}/lib/gcc/arm-none-eabi/10.3.1/thumb/v7/nofp/crtn.o", .{arm_gcc_path}) });
+
+    elf.want_lto = true; //silence ld.lld tripples warning
+    elf.link_gc_sections = true; //equivalent to -Wl,--gc-sections
 
     //Add c source files
     elf.addCSourceFiles(.{

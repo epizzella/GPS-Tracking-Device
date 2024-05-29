@@ -9,7 +9,7 @@ pub const Zuart = struct {
     ///
     /// data: slice of data to write.
     pub fn write(self: *Zuart, data: []const u8) halStatus.errors!void {
-        const status = hal.HAL_UART_Transmit_IT(self.m_uart_handle, data.ptr, data.len);
+        const status = hal.HAL_UART_Transmit_IT(self.m_uart_handle, data.ptr, @intCast(data.len));
         try halStatus.StatusToErr(status);
     }
 
@@ -17,7 +17,7 @@ pub const Zuart = struct {
     ///
     /// data: slice of the receiving data buffer.
     pub fn beginRead(self: *Zuart, data: []const u8) halStatus.errors!void {
-        const status = hal.HAL_UART_Receive_IT(self.m_uart_handle, data.ptr, data.len);
+        const status = hal.HAL_UART_Receive_IT(self.m_uart_handle, data.ptr, @intCast(data.len));
         try halStatus.StatusToErr(status);
     }
 

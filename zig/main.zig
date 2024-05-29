@@ -19,8 +19,12 @@ export fn main() void {
         break :blk;
     };
 
+    pcCom.write("hello world interrupted!\n") catch blk: {
+        break :blk;
+    };
+
     while (true) {
         led.TogglePin();
-        zuitl.delay(500);
+        zuitl.delay(100);
     }
 }
