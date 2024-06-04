@@ -103,18 +103,18 @@ void DebugMon_Handler(void)
 /**
   * @brief This function handles Pendable request for system service.
   */
-void PendSV_Handler(void)
-{
+//void PendSV_Handler(void)
+//{
 
-}
+//}
 
 /**
   * @brief This function handles System tick timer.
   */
-void SysTick_Handler(void)
-{
-  HAL_IncTick();
-}
+//void SysTick_Handler(void)
+//{
+//  HAL_IncTick();
+//}
 
 /******************************************************************************/
 /* STM32F1xx Peripheral Interrupt Handlers                                    */

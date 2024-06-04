@@ -29,7 +29,7 @@ pub fn build(b: *std.Build) void {
 
     //Releasesmall generates an elf thats missing the entire symbol table for some reason
     //Releasesafe and Releasefast both generate elf files that have symbol tables and fit into flash
-    const optimize = std.builtin.OptimizeMode.ReleaseSafe;
+    const optimize = std.builtin.OptimizeMode.Debug;
 
     const elf = b.addExecutable(.{
         .name = prj_name ++ ".elf",
@@ -52,7 +52,7 @@ pub fn build(b: *std.Build) void {
 
     const c_flags = [_][]const u8{
         "-g3", //max debug symbols
-        "-O1", //minor optimizations
+        //  "-O1", //minor optimizations
         "-Wall", //This enables all the warnings about constructions that some users consider questionable, and that are easy to avoid, even in conjunction with macros.
         "-Wextra", //This enables some extra warning flags that are not enabled by -Wall.
         "-mthumb", //Requests that the compiler targets the thumb instruction set.
@@ -66,6 +66,7 @@ pub fn build(b: *std.Build) void {
         "-fdata-sections",
         "-nostdlib",
         "-nostdinc",
+        //    "-gdwarf-2",
     };
 
     const stm32f1_hal_src = [_][]const u8{
