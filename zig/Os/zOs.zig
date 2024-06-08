@@ -1,3 +1,5 @@
+const std = @import("std");
+
 const core_SHPR3: *u32 = @ptrFromInt(0xE000ED20);
 const core_ICSR: *u32 = @ptrFromInt(0xE000ED04);
 
@@ -7,28 +9,41 @@ pub const os_error = error{
     OS_MEM_ALIGNMENT, //task stack is not memory aligned
 };
 
-//var idle_stack: [50]u32 = undefined;
-//fn idle_task_handler() void {}
-//var idle_task: Task = undefined;
+var idle_stack: [50]u32 = undefined;
+fn idle_task_handler() callconv(.C) void {
+    while (true) {
+        //idle
+    }
+}
 
-export var current_task: *volatile Task = undefined;
+export var current_task: ?*volatile Task = null;
 export var next_task: *volatile Task = undefined;
 
-const max_tasks = 32 + 1;
-var total_tasks: u32 = 0;
-
-var tasks: [max_tasks]Task = undefined;
+const max_tasks = 31 + 1;
+var tasks = [_]?Task{null} ** max_tasks;
 var task_index: u8 = 0;
 
 var os_started: bool = false;
 
 pub fn start() void {
+    std.mem.doNotOptimizeAway(idle_task_handler);
+
+    Task.create_task(&idle_stack, &idle_task_handler, 31);
+    var local_next_task: *volatile Task = undefined;
+    std.mem.doNotOptimizeAway(local_next_task);
+
     core_SHPR3.* |= pendsv_lowest_priority; //lowest priority to avoid context switch during ISR
-    //   idle_task = Task.create_task(&idle_stack, &idle_task_handler, 255);
-    current_task = @ptrFromInt(0x8000000);
-    next_task = &tasks[0];
+    if (tasks[0] != null) {
+        local_next_task = @ptrCast(&tasks[0]);
+    } else {
+        local_next_task = @ptrCast(&tasks[max_tasks - 1]); //idle task
+    }
+
+    current_task = local_next_task;
     os_started = true;
-    core_ICSR.* |= 1 << 28; //trigger pendSV
+    current_task.?.*.task_handler();
+    //schedule();
+    //core_ICSR.* |= 1 << 28; //trigger pendSV
 }
 
 pub fn onIdle() void {}
@@ -36,18 +51,25 @@ pub fn onIdle() void {}
 var last_time: u32 = 0;
 pub fn schedule() void {
     disableInterrupts();
-    const current_time: u32 = uwTick;
-
-    if (((current_time - last_time) > 4000) or (current_task.state != task_state.active)) {
-        last_time = current_time;
-        task_index += 1;
-        if (task_index >= total_tasks) {
-            task_index = 0;
-        }
-        next_task = &tasks[task_index];
+    next_task = getNextTask();
+    if (current_task != next_task) {
         core_ICSR.* |= 1 << 28; //trigger pendSV
     }
+
     enableInterrupts();
+}
+
+fn getNextTask() *Task {
+    var rtn_task: *Task = @ptrCast(&tasks[max_tasks - 1]);
+    for (&tasks) |*task| {
+        if (task.* != null) {
+            if (task.*.?.state == task_state.active) {
+                rtn_task = @ptrCast(task);
+                break;
+            }
+        }
+    }
+    return rtn_task;
 }
 
 const task_state = enum(u32) {
@@ -59,10 +81,10 @@ const task_state = enum(u32) {
 pub const Task = extern struct {
     stack_ptr: [*]u32,
     stack_start: [*]u32,
-    stack_length: u32,
+    //stack_length: u32,
     task_handler: *const fn () callconv(.C) void,
     state: task_state,
-    blockeded_time: u32,
+    blocked_time: u32,
     priority: u8,
 
     ///Create a task and add it to the OS
@@ -70,12 +92,7 @@ pub const Task = extern struct {
         stack: []u32,
         task_handler: *const fn () callconv(.C) void,
         priority: u8,
-    ) Task {
-        //check that stack is memory aligned i.e. first 3 bits are 000
-        //if (((@intFromPtr(stack.ptr) + stack.len) & 0x3) != 0) {
-        //    return os_error.OS_MEM_ALIGNMENT;
-        //}
-
+    ) void {
         stack.ptr[stack.len - 1] = 0x1 << 24; // xPSR
         stack.ptr[stack.len - 2] = @intFromPtr(task_handler); //PC
         stack.ptr[stack.len - 3] = 0x0E0E0E0E; // LR
@@ -98,29 +115,20 @@ pub const Task = extern struct {
             mem.* = 0xDEADC0DE;
         }
 
-        if (total_tasks < max_tasks) {
-            tasks[total_tasks] = Task{
-                .stack_start = stack.ptr,
-                .stack_length = stack.len,
-                .task_handler = task_handler,
-                .priority = priority,
-                .stack_ptr = stack.ptr + stack.len - 16,
-                .state = task_state.active,
-                .blockeded_time = 0,
-            };
-            total_tasks += 1;
-        }
+        tasks[priority] = Task{
+            .stack_start = stack.ptr,
+            .stack_ptr = stack.ptr + stack.len - 16,
+            .task_handler = task_handler,
+            .priority = priority,
+            .state = task_state.active,
+            .blocked_time = 0,
+        };
+
         //else throw an error
 
-        return tasks[total_tasks - 1];
-    }
-
-    pub fn placeholder(self: Task) void {
-        _ = self;
+        //return tasks[total_tasks - 1];
     }
 };
-
-//pub const Time = struct {};
 
 pub inline fn enableInterrupts() void {
     asm volatile ("CPSIE    I");
@@ -130,11 +138,11 @@ pub inline fn disableInterrupts() void {
     asm volatile ("CPSID    I");
 }
 
-fn context_swtich() void {
+pub inline fn context_swtich() void {
     asm volatile ("                                 \n" ++
             "  CPSID    I                           \n" ++
-            "cmp.w %[curr_task], #134217728         \n" ++ //if current_task != 0x8000000
-            "beq.n SpEqlNextSp                      \n" ++
+            "  cmp.w %[curr_task], #0               \n" ++ //if current_task != null
+            "  beq.n SpEqlNextSp                    \n" ++
             "  PUSH     {r4-r11}                    \n" ++ //push registers r4-r11 on the stack
             "  STR      sp, [%[curr_task],#0x00]    \n" ++ //save the current stack pointer in current_task
             "SpEqlNextSp:                           \n" ++
@@ -150,33 +158,31 @@ fn context_swtich() void {
             "  POP      {r4-r11}        \n" ++ //pop registers r4-r11
             "  CPSIE    I               \n" ++ //enable interrupts
             "  BX       lr              \n" //return to the next thread
-        : //no return
-        : [curr_task] "l" (current_task),
-          [next_task] "l" (next_task),
     );
 }
 
 pub fn delay(time_ms: u32) void {
-    current_task.blockeded_time = time_ms;
-    current_task.state = task_state.blocked;
+    current_task.?.blocked_time = time_ms;
+    current_task.?.state = task_state.blocked;
     schedule();
 }
 
-var time: u32 = 0;
-fn tick() void {
-    time += 1;
-
+var tick_count: u32 = 0;
+pub inline fn tick() void {
+    tick_count += 1;
+    updateTasksDelay();
     if (os_started) {
         schedule();
     }
 }
 
-extern var uwTick: c_uint;
-export fn SysTick_Handler() void {
-    uwTick += 1; //adding 1 counts up at 1ms
-    tick();
-}
-
-export fn PendSV_Handler() void {
-    context_swtich();
+fn updateTasksDelay() void {
+    for (&tasks) |*task| {
+        if (task.* != null and task.*.?.blocked_time > 0) {
+            task.*.?.blocked_time -= 1;
+            if (task.*.?.blocked_time == 0) {
+                task.*.?.state = task_state.active;
+            }
+        }
+    }
 }

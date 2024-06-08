@@ -100,20 +100,24 @@ void DebugMon_Handler(void)
 
 }
 
+
+//extern void os_context_swtich();
 /**
   * @brief This function handles Pendable request for system service.
   */
 //void PendSV_Handler(void)
 //{
-
+//  os_context_swtich();
 //}
 
+//extern void os_tick();
 /**
   * @brief This function handles System tick timer.
   */
 //void SysTick_Handler(void)
 //{
 //  HAL_IncTick();
+//  os_tick();
 //}
 
 /******************************************************************************/
