@@ -24,7 +24,7 @@
                 "samplesPerSecond": 4,
             },
             "svdFile": "STM32F103.svd", 
-            "gdbPath": "gdb-multiarch",
+            "gdbPath": "arm-none-eabi-gdb",
         }
     ]
     

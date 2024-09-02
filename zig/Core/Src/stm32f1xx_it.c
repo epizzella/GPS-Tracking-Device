@@ -45,6 +45,8 @@ void NMI_Handler(void)
   */
 void HardFault_Handler(void)
 {
+  uint32_t cfsr = *(uint32_t*)0xE000ED28;
+  uint32_t hfsr = *(uint32_t*)0xE000ED2C;
   while (1)
   {
     __asm__("BKPT");
@@ -87,10 +89,10 @@ void UsageFault_Handler(void)
 /**
   * @brief This function handles System service call via SWI instruction.
   */
-void SVC_Handler(void)
-{
+//void SVC_Handler(void)
+//{
 
-}
+//}
 
 /**
   * @brief This function handles Debug monitor.

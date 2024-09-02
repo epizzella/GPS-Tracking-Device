@@ -103,19 +103,20 @@ pub fn build(b: *std.Build) void {
     };
 
     const arm_gcc_path = "/home/fixer/arm-gcc";
+    const arm_gcc_version = "13.3.1";
     // Manually including libraries bundled with arm-none-eabi-gcc
     elf.addLibraryPath(.{ .path = b.fmt("{s}/arm-none-eabi/lib/thumb/v7/nofp", .{arm_gcc_path}) });
-    elf.addLibraryPath(.{ .path = b.fmt("{s}/lib/gcc/arm-none-eabi/10.3.1/thumb/v7/nofp", .{arm_gcc_path}) });
+    elf.addLibraryPath(.{ .path = b.fmt("{s}/lib/gcc/arm-none-eabi/{s}/thumb/v7/nofp", .{ arm_gcc_path, arm_gcc_version }) });
     elf.addSystemIncludePath(.{ .path = b.fmt("{s}/arm-none-eabi/include", .{arm_gcc_path}) });
     elf.linkSystemLibrary("c_nano");
     elf.linkSystemLibrary("m");
 
     // Manually include C runtime objects bundled with arm-none-eabi-gcc
     elf.addObjectFile(.{ .path = b.fmt("{s}/arm-none-eabi/lib/thumb/v7/nofp/crt0.o", .{arm_gcc_path}) });
-    elf.addObjectFile(.{ .path = b.fmt("{s}/lib/gcc/arm-none-eabi/10.3.1/thumb/v7/nofp/crti.o", .{arm_gcc_path}) });
-    elf.addObjectFile(.{ .path = b.fmt("{s}/lib/gcc/arm-none-eabi/10.3.1/thumb/v7/nofp/crtbegin.o", .{arm_gcc_path}) });
-    elf.addObjectFile(.{ .path = b.fmt("{s}/lib/gcc/arm-none-eabi/10.3.1/thumb/v7/nofp/crtend.o", .{arm_gcc_path}) });
-    elf.addObjectFile(.{ .path = b.fmt("{s}/lib/gcc/arm-none-eabi/10.3.1/thumb/v7/nofp/crtn.o", .{arm_gcc_path}) });
+    elf.addObjectFile(.{ .path = b.fmt("{s}/lib/gcc/arm-none-eabi/{s}/thumb/v7/nofp/crti.o", .{ arm_gcc_path, arm_gcc_version }) });
+    elf.addObjectFile(.{ .path = b.fmt("{s}/lib/gcc/arm-none-eabi/{s}/thumb/v7/nofp/crtbegin.o", .{ arm_gcc_path, arm_gcc_version }) });
+    elf.addObjectFile(.{ .path = b.fmt("{s}/lib/gcc/arm-none-eabi/{s}/thumb/v7/nofp/crtend.o", .{ arm_gcc_path, arm_gcc_version }) });
+    elf.addObjectFile(.{ .path = b.fmt("{s}/lib/gcc/arm-none-eabi/{s}/thumb/v7/nofp/crtn.o", .{ arm_gcc_path, arm_gcc_version }) });
 
     elf.want_lto = true; //silence ld.lld tripples warning
     elf.link_gc_sections = true; //equivalent to -Wl,--gc-sections
