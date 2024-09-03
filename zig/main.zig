@@ -3,14 +3,14 @@ const zuart = @import("Zwrapper/uart_wrapper.zig").Zuart;
 const zgpio = @import("Zwrapper/gpio_wrapper.zig").Zgpio;
 const zuitl = @import("Zwrapper/util_wrapper.zig").Zutil;
 const os = @import("Os/os_core.zig");
-const os_user = @import("os_user.zig");
+
 const std = @import("std");
 
 fn task() callconv(.C) void {
     const led = zgpio{ .m_port = hal.GPIOC, .m_pin = hal.GPIO_PIN_13 };
     while (true) {
         led.TogglePin();
-        os._delay(250);
+        os._delay(500);
     }
 }
 
@@ -22,6 +22,46 @@ fn task2() callconv(.C) void {
     }
 }
 
+fn task3() callconv(.C) void {
+    const led = zgpio{ .m_port = hal.GPIOA, .m_pin = hal.GPIO_PIN_8 };
+    while (true) {
+        led.TogglePin();
+        os._delay(200);
+    }
+}
+
+fn task4() callconv(.C) void {
+    const led = zgpio{ .m_port = hal.GPIOA, .m_pin = hal.GPIO_PIN_9 };
+    while (true) {
+        led.TogglePin();
+        os._delay(300);
+    }
+}
+
+fn task5() callconv(.C) void {
+    const led = zgpio{ .m_port = hal.GPIOA, .m_pin = hal.GPIO_PIN_10 };
+    while (true) {
+        led.TogglePin();
+        os._delay(400);
+    }
+}
+
+fn task6() callconv(.C) void {
+    const led = zgpio{ .m_port = hal.GPIOA, .m_pin = hal.GPIO_PIN_11 };
+    while (true) {
+        led.TogglePin();
+        os._delay(500);
+    }
+}
+
+fn task7() callconv(.C) void {
+    const led = zgpio{ .m_port = hal.GPIOA, .m_pin = hal.GPIO_PIN_12 };
+    while (true) {
+        led.TogglePin();
+        os._delay(600);
+    }
+}
+
 fn _idle_task_handler() callconv(.C) void {
     while (true) {
         //idle
@@ -30,9 +70,6 @@ fn _idle_task_handler() callconv(.C) void {
 }
 
 export fn main() void {
-    std.mem.doNotOptimizeAway(os_user.SysTick_Handler);
-    std.mem.doNotOptimizeAway(os_user.PendSV_Handler);
-    std.mem.doNotOptimizeAway(_idle_task_handler);
     _ = hal.HAL_Init();
     _ = hal.SystemClock_Config();
     _ = hal.MX_GPIO_Init();
@@ -41,33 +78,15 @@ export fn main() void {
     _ = hal.MX_TIM3_Init();
     _ = hal.MX_TIM4_Init();
 
-    //var pcCom = zuart{ .m_uart_handle = &hal.huart2 };
-
-    // pcCom.writeBlocking(test_var, 50) catch blk: {
-    //     break :blk;
-    // };
-
-    // pcCom.write("hello world interrupted!\n") catch blk: {
-    //     break :blk;
-    // };
-
-    //   var stack: [100]u32 = undefined;
-    //   var stack2: [100]u32 = undefined;
-
-    //os.create_task(&stack, &task, 0);
-    //os.create_task(&stack2, &task2, 1);
-    //os.start();
-
-    const stackSize = 100;
+    const stackSize = 50;
     var stack: [stackSize]u32 = [_]u32{0xDEADC0DE} ** stackSize;
     var stack2: [stackSize]u32 = [_]u32{0xDEADC0DE} ** stackSize;
+    var stack3: [stackSize]u32 = [_]u32{0xDEADC0DE} ** stackSize;
+    var stack4: [stackSize]u32 = [_]u32{0xDEADC0DE} ** stackSize;
+    var stack5: [stackSize]u32 = [_]u32{0xDEADC0DE} ** stackSize;
+    var stack6: [stackSize]u32 = [_]u32{0xDEADC0DE} ** stackSize;
+    var stack7: [stackSize]u32 = [_]u32{0xDEADC0DE} ** stackSize;
     var _idle_stack: [stackSize]u32 = [_]u32{0xDEADC0DE} ** stackSize;
-
-    for (0..stackSize, &stack, &stack2, &_idle_stack) |i, *s, *s2, *si| {
-        s.* = i;
-        s2.* = i;
-        si.* = i;
-    }
 
     var tcb1 = os.os_priorityQ.TaskCtrlBlk{
         .stack = &stack,
@@ -83,7 +102,57 @@ export fn main() void {
         .stack = &stack2,
         .stack_ptr = @intFromPtr(&stack2[stack2.len - 16]),
         .task_handler = &task2,
+        .priority = 5,
+        .blocked_time = 0,
+        .towardHead = null,
+        .towardTail = null,
+    };
+
+    var tcb3 = os.os_priorityQ.TaskCtrlBlk{
+        .stack = &stack3,
+        .stack_ptr = @intFromPtr(&stack3[stack3.len - 16]),
+        .task_handler = &task3,
+        .priority = 5,
+        .blocked_time = 0,
+        .towardHead = null,
+        .towardTail = null,
+    };
+
+    var tcb4 = os.os_priorityQ.TaskCtrlBlk{
+        .stack = &stack4,
+        .stack_ptr = @intFromPtr(&stack4[stack4.len - 16]),
+        .task_handler = &task4,
         .priority = 6,
+        .blocked_time = 0,
+        .towardHead = null,
+        .towardTail = null,
+    };
+
+    var tcb5 = os.os_priorityQ.TaskCtrlBlk{
+        .stack = &stack5,
+        .stack_ptr = @intFromPtr(&stack5[stack5.len - 16]),
+        .task_handler = &task5,
+        .priority = 6,
+        .blocked_time = 0,
+        .towardHead = null,
+        .towardTail = null,
+    };
+
+    var tcb6 = os.os_priorityQ.TaskCtrlBlk{
+        .stack = &stack6,
+        .stack_ptr = @intFromPtr(&stack6[stack6.len - 16]),
+        .task_handler = &task6,
+        .priority = 6,
+        .blocked_time = 0,
+        .towardHead = null,
+        .towardTail = null,
+    };
+
+    var tcb7 = os.os_priorityQ.TaskCtrlBlk{
+        .stack = &stack7,
+        .stack_ptr = @intFromPtr(&stack7[stack7.len - 16]),
+        .task_handler = &task7,
+        .priority = 13,
         .blocked_time = 0,
         .towardHead = null,
         .towardTail = null,
@@ -102,23 +171,32 @@ export fn main() void {
     os._addTaskToOs(&idleTask);
     os._addTaskToOs(&tcb1);
     os._addTaskToOs(&tcb2);
+    os._addTaskToOs(&tcb3);
+    os._addTaskToOs(&tcb4);
+    os._addTaskToOs(&tcb5);
+    os._addTaskToOs(&tcb6);
+    os._addTaskToOs(&tcb7);
+
     os._startOS();
 }
 
+var pcCom = zuart{ .m_uart_handle = &hal.huart2 };
+
 const builtin = @import("builtin");
 pub fn panic(msg: []const u8, _: ?*std.builtin.StackTrace, _: ?usize) noreturn {
-    var pcCom = zuart{ .m_uart_handle = &hal.huart2 };
-    pcCom.writeBlocking("--Panic--\n", 100) catch blk: {
+    asm volatile ("BKPT");
+
+    // pcCom.writeBlocking("--Panic--\n", 500) catch blk: {
+    //     break :blk;
+    // };
+    pcCom.writeBlocking(msg, 500) catch blk: {
         break :blk;
     };
-    pcCom.writeBlocking(msg, 100) catch blk: {
-        break :blk;
-    };
-    pcCom.writeBlocking("\n", 100) catch blk: {
-        break :blk;
-    };
+    // pcCom.writeBlocking("\n", 500) catch blk: {
+    //     break :blk;
+    // };
 
     while (true) {
-        @breakpoint();
+        asm volatile ("BKPT");
     }
 }
