@@ -54,3 +54,7 @@ dkms.conf
 Build/
 Other/*
 !Other/*.ioc
+
+# Zig
+zig-cache/
+zig-out
