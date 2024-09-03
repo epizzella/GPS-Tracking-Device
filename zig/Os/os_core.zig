@@ -112,7 +112,7 @@ fn _init_stack(stack: []u32, task_handler: *const fn () callconv(.C) void) void 
 }
 
 //Call from inside PendSV_Handler
-pub inline fn _context_swtich(current: ?*_Task, next: *_Task) void {
+pub inline fn _context_swtich() void {
     asm volatile ("                                 \n" ++
             "  CPSID    I                           \n" ++ //disable interrupts
             "  cmp.w %[curr_task], #0               \n" ++ //if current_task != null
@@ -122,8 +122,8 @@ pub inline fn _context_swtich(current: ?*_Task, next: *_Task) void {
             "SpEqlNextSp:                           \n" ++
             "  LDR      sp, [%[next_task],#0x08]    \n" //Set stack pointer to next_task stack pointer
         : //no return
-        : [curr_task] "l" (current),
-          [next_task] "l" (next),
+        : [curr_task] "l" (_current_task),
+          [next_task] "l" (_next_task),
     );
 
     _current_task = _next_task;
@@ -142,7 +142,7 @@ pub export fn SysTick_Handler() void {
 }
 
 pub export fn PendSV_Handler() void {
-    _context_swtich(@volatileCast(_current_task), @volatileCast(_next_task));
+    _context_swtich();
 }
 
 pub export fn SVC_Handler() void {

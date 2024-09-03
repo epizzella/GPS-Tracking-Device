@@ -186,15 +186,15 @@ const builtin = @import("builtin");
 pub fn panic(msg: []const u8, _: ?*std.builtin.StackTrace, _: ?usize) noreturn {
     asm volatile ("BKPT");
 
-    // pcCom.writeBlocking("--Panic--\n", 500) catch blk: {
-    //     break :blk;
-    // };
+    pcCom.writeBlocking("--Panic--\n", 500) catch blk: {
+        break :blk;
+    };
     pcCom.writeBlocking(msg, 500) catch blk: {
         break :blk;
     };
-    // pcCom.writeBlocking("\n", 500) catch blk: {
-    //     break :blk;
-    // };
+    pcCom.writeBlocking("\n", 500) catch blk: {
+        break :blk;
+    };
 
     while (true) {
         asm volatile ("BKPT");

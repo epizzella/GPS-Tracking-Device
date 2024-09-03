@@ -50,18 +50,23 @@ const TaskControlTable = struct {
         self.runningPrio = prio;
     }
 
-    pub fn getNextReadyTask(self: *TaskControlTable) *TaskCtrlBlk {
-        var ready: u32 = 0xffffffff;
-        const ready_msk = self.readyMask;
+    pub fn cycleActive(self: *TaskControlTable) void {
         if (self.runningPrio < MAX_PRIO_LEVEL) {
             self.table[self.runningPrio].active_tasks.headToTail();
         }
+    }
+
+    pub fn getNextReadyTask(self: *TaskControlTable) *TaskCtrlBlk {
+        var ready: u32 = 0xffffffff;
+        const ready_msk = self.readyMask;
 
         asm volatile ("clz    %[ready], %[mask]"
             : [ready] "=l" (ready), //return
             : [mask] "l" (ready_msk), //param
         );
+
         self.runningPrio = ready;
+
         return self.table[ready].active_tasks.head.?;
     }
 
@@ -70,20 +75,15 @@ const TaskControlTable = struct {
             if (taskState.yielded_task.head) |head| {
                 var tcb = head;
                 while (true) { //iterate over the priority level list
-                    // if (tcb.blocked_time == 100) {
-                    //     @breakpoint();
-                    // }
 
-                    // if (tcb.blocked_time == 1) {
-                    //     @breakpoint();
-                    // }
+                    if (tcb.blocked_time == 0) {
+                        @breakpoint();
+                    }
 
                     tcb.blocked_time -= 1; //todo: add a varaible for the system clock period
                     if (tcb.blocked_time == 0) {
                         self.removeYielded(tcb);
                         self.addActive(tcb);
-                        // _ = taskState.yielded_task.remove(tcb);
-                        // taskState.active_tasks.append(tcb);
                     }
 
                     if (tcb.towardTail) |next| {
@@ -133,6 +133,9 @@ const TcbQueue = struct {
             head = head.towardTail;
             head.towardHead = null;
             rtn.?.towardTail = null;
+            if (self.elements == 0) {
+                asm volatile ("BKPT");
+            }
             self.elements -= 1;
         }
         return rtn;
@@ -162,26 +165,37 @@ const TcbQueue = struct {
     ///Removes the specified tcb from the queue.  Returns false if the tcb is not contained in the queue.
     pub fn remove(self: *TcbQueue, tcb: *TaskCtrlBlk) bool {
         var rtn = false;
-        if (self.head != null) {
-            if (self.contains(tcb)) {
-                if (self.head == self.tail) { //list of 1
-                    self.head = null;
-                    self.tail = null;
-                } else {
-                    if (tcb.towardHead) |towardHead| {
-                        towardHead.towardTail = tcb.towardTail;
-                    }
-                    if (tcb.towardTail) |towardTail| {
-                        towardTail.towardHead = tcb.towardHead;
-                    }
-                }
 
-                tcb.towardHead = null;
-                tcb.towardTail = null;
-                self.elements -= 1;
-                rtn = true;
+        if (self.contains(tcb)) {
+            if (self.head == self.tail) { //list of 1
+                self.head = null;
+                self.tail = null;
+            } else if (self.head == tcb) {
+                if (tcb.towardTail) |towardTail| {
+                    self.head = towardTail;
+                    towardTail.towardHead = null;
+                }
+            } else if (self.tail == tcb) {
+                if (tcb.towardHead) |towardHead| {
+                    self.tail = towardHead;
+                    towardHead.towardTail = null;
+                }
+            } else {
+                if (tcb.towardHead) |towardHead| {
+                    towardHead.towardTail = tcb.towardTail;
+                }
+                if (tcb.towardTail) |towardTail| {
+                    towardTail.towardHead = tcb.towardHead;
+                }
             }
+
+            tcb.towardHead = null;
+            tcb.towardTail = null;
+
+            self.elements -= 1;
+            rtn = true;
         }
+
         return rtn;
     }
 
@@ -204,7 +218,6 @@ const TcbQueue = struct {
 
 pub const TaskCtrlBlk = struct {
     stack: []u32,
-    //   stack_ptr: [*]u32,
     stack_ptr: u32,
     task_handler: *const fn () callconv(.C) void,
     blocked_time: u32,
@@ -216,7 +229,7 @@ pub const TaskCtrlBlk = struct {
     pub fn suspendMe(self: TaskCtrlBlk) void {
         taskTable.removeActive(&self);
         taskTable.addSuspended(&self);
-        if (self == taskTable.table[taskTable.runningPrio].active_tasks.head.*) {
+        if (self == taskTable.table[taskTable.runningPrio].active_tasks.head) {
             runScheduler();
         }
     }
@@ -230,15 +243,15 @@ pub const TaskCtrlBlk = struct {
         }
     }
 
-    ///Delay the task for a number of miliseconds.
-    pub fn delayMe(self: TaskCtrlBlk, time_ms: u32) void {
-        if (time_ms > 0) {
-            self.blocked_time = time_ms;
-            taskTable.removeActive(&self);
-            taskTable.addYeilded(&self);
-        }
-        runScheduler();
-    }
+    //Delay the task for a number of miliseconds.
+    // pub fn delayMe(self: TaskCtrlBlk, time_ms: u32) void {
+    //     if (time_ms > 0) {
+    //         self.blocked_time = time_ms;
+    //         taskTable.removeActive(&self);
+    //         taskTable.addYeilded(&self);
+    //     }
+    //     runScheduler();
+    // }
 };
 
 inline fn runScheduler() void {
