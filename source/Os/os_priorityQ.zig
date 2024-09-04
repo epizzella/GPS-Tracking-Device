@@ -15,7 +15,7 @@ const TaskControlTable = struct {
     ///Add tcb to the active task queue
     pub fn addActive(self: *TaskControlTable, tcb: *TaskCtrlBlk) void {
         self.table[tcb.priority].active_tasks.append(tcb);
-        self.readyMask |= (one << @intCast(PRIO_ADJUST - tcb.priority));
+        self.readyMask |= (one << PRIO_ADJUST - tcb.priority);
     }
 
     ///Add tcb to the yielded tcb queue

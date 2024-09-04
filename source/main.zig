@@ -4,13 +4,11 @@ const zgpio = @import("Zwrapper/gpio_wrapper.zig").Zgpio;
 const zuitl = @import("Zwrapper/util_wrapper.zig").Zutil;
 const os = @import("Os/os_core.zig");
 
-const std = @import("std");
-
 fn task() callconv(.C) void {
     const led = zgpio{ .m_port = hal.GPIOC, .m_pin = hal.GPIO_PIN_13 };
     while (true) {
         led.TogglePin();
-        os._delay(500);
+        os.delay(500);
     }
 }
 
@@ -18,7 +16,7 @@ fn task2() callconv(.C) void {
     const led = zgpio{ .m_port = hal.GPIOA, .m_pin = hal.GPIO_PIN_6 };
     while (true) {
         led.TogglePin();
-        os._delay(100);
+        os.delay(100);
     }
 }
 
@@ -26,7 +24,7 @@ fn task3() callconv(.C) void {
     const led = zgpio{ .m_port = hal.GPIOA, .m_pin = hal.GPIO_PIN_8 };
     while (true) {
         led.TogglePin();
-        os._delay(200);
+        os.delay(200);
     }
 }
 
@@ -34,7 +32,7 @@ fn task4() callconv(.C) void {
     const led = zgpio{ .m_port = hal.GPIOA, .m_pin = hal.GPIO_PIN_9 };
     while (true) {
         led.TogglePin();
-        os._delay(300);
+        os.delay(300);
     }
 }
 
@@ -42,7 +40,7 @@ fn task5() callconv(.C) void {
     const led = zgpio{ .m_port = hal.GPIOA, .m_pin = hal.GPIO_PIN_10 };
     while (true) {
         led.TogglePin();
-        os._delay(400);
+        os.delay(400);
     }
 }
 
@@ -50,7 +48,7 @@ fn task6() callconv(.C) void {
     const led = zgpio{ .m_port = hal.GPIOA, .m_pin = hal.GPIO_PIN_11 };
     while (true) {
         led.TogglePin();
-        os._delay(500);
+        os.delay(500);
     }
 }
 
@@ -58,14 +56,7 @@ fn task7() callconv(.C) void {
     const led = zgpio{ .m_port = hal.GPIOA, .m_pin = hal.GPIO_PIN_12 };
     while (true) {
         led.TogglePin();
-        os._delay(600);
-    }
-}
-
-fn _idle_task_handler() callconv(.C) void {
-    while (true) {
-        //idle
-        //add a call back for the user to set
+        os.delay(600);
     }
 }
 
@@ -86,7 +77,6 @@ export fn main() void {
     var stack5: [stackSize]u32 = [_]u32{0xDEADC0DE} ** stackSize;
     var stack6: [stackSize]u32 = [_]u32{0xDEADC0DE} ** stackSize;
     var stack7: [stackSize]u32 = [_]u32{0xDEADC0DE} ** stackSize;
-    var _idle_stack: [stackSize]u32 = [_]u32{0xDEADC0DE} ** stackSize;
 
     var tcb1 = os.os_priorityQ.TaskCtrlBlk{
         .stack = &stack,
@@ -158,30 +148,20 @@ export fn main() void {
         .towardTail = null,
     };
 
-    var idleTask = os.os_priorityQ.TaskCtrlBlk{
-        .stack = &_idle_stack,
-        .stack_ptr = @intFromPtr(&_idle_stack[_idle_stack.len - 16]),
-        .task_handler = &_idle_task_handler,
-        .priority = 31,
-        .blocked_time = 0,
-        .towardHead = null,
-        .towardTail = null,
-    };
+    os.addTaskToOs(&tcb1);
+    os.addTaskToOs(&tcb2);
+    os.addTaskToOs(&tcb3);
+    os.addTaskToOs(&tcb4);
+    os.addTaskToOs(&tcb5);
+    os.addTaskToOs(&tcb6);
+    os.addTaskToOs(&tcb7);
 
-    os._addTaskToOs(&idleTask);
-    os._addTaskToOs(&tcb1);
-    os._addTaskToOs(&tcb2);
-    os._addTaskToOs(&tcb3);
-    os._addTaskToOs(&tcb4);
-    os._addTaskToOs(&tcb5);
-    os._addTaskToOs(&tcb6);
-    os._addTaskToOs(&tcb7);
-
-    os._startOS();
+    os.startOS();
 }
 
 var pcCom = zuart{ .m_uart_handle = &hal.huart2 };
 
+const std = @import("std");
 const builtin = @import("builtin");
 pub fn panic(msg: []const u8, _: ?*std.builtin.StackTrace, _: ?usize) noreturn {
     asm volatile ("BKPT");

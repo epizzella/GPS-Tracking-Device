@@ -1,17 +1,26 @@
-const Task = @import("os_task.zig").Task;
-const task_state = @import("os_task.zig").task_state;
-
 pub const os_priorityQ = @import("os_priorityQ.zig");
 const _Task = @import("os_priorityQ.zig").TaskCtrlBlk;
 
 //---------------Public API Start---------------//
 
-pub fn _startOS() void {
+pub fn startOS() void {
     core_SHPR3.* |= (isr_lowest_priority << pendSV_SHPR3_offset); //Set the pendsv to the lowest priority to avoid context switch during ISR
     core_SHPR3.* &= ~(isr_lowest_priority << sysTick_SHPR3_offset); //Set sysTick to the highest priority.
-    //   _next_task = os_priorityQ.taskTable.getNextReadyTask();
+
+    var idle_task = os_priorityQ.TaskCtrlBlk{
+        .stack = &idle_stack,
+        .stack_ptr = @intFromPtr(&idle_stack[idle_stack.len - 16]),
+        .task_handler = &_idle_task_handler,
+        .priority = 31,
+        .blocked_time = 0,
+        .towardHead = null,
+        .towardTail = null,
+    };
+
     _os_started = true;
-    _runScheduler(); //begin os
+    addTaskToOs(&idle_task);
+
+    runScheduler(); //begin os
 
     //never reach here
 
@@ -24,17 +33,17 @@ pub fn _startOS() void {
     }
 }
 
-pub fn _addTaskToOs(tcb: *_Task) void {
+pub fn addTaskToOs(tcb: *_Task) void {
     _init_stack(tcb.stack, tcb.task_handler);
     os_priorityQ.taskTable.addActive(tcb);
 }
 
-pub fn _delay(time_ms: u32) void {
+pub fn delay(time_ms: u32) void {
     if (_current_task) |c_task| {
         c_task.blocked_time = time_ms;
         os_priorityQ.taskTable.removeActive(@volatileCast(c_task));
         os_priorityQ.taskTable.addYeilded(@volatileCast(c_task));
-        _runScheduler();
+        runScheduler();
     }
 }
 
@@ -58,6 +67,16 @@ const isr_lowest_priority: u32 = 0xFF;
 const pendSV_SHPR3_offset: u32 = 16;
 const sysTick_SHPR3_offset: u32 = 24;
 
+const IDLE_STACK_SIZE: u32 = 50;
+var idle_stack: [IDLE_STACK_SIZE]u32 = [_]u32{0xDEADC0DE} ** IDLE_STACK_SIZE;
+
+fn _idle_task_handler() callconv(.C) void {
+    while (true) {
+        //idle
+        //add a call back for the user to set
+    }
+}
+
 fn forceISRInclusion(val: anytype) void {
     asm volatile (""
         :
@@ -70,10 +89,6 @@ fn forceISRInclusion(val: anytype) void {
 var _current_task: ?*volatile _Task = null;
 var _next_task: *volatile _Task = undefined;
 var _os_started: bool = false;
-
-inline fn _runScheduler() void {
-    asm volatile ("SVC      #0");
-}
 
 pub fn _schedule() void {
     _next_task = os_priorityQ.taskTable.getNextReadyTask();
