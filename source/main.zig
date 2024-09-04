@@ -78,7 +78,7 @@ export fn main() void {
     var stack6: [stackSize]u32 = [_]u32{0xDEADC0DE} ** stackSize;
     var stack7: [stackSize]u32 = [_]u32{0xDEADC0DE} ** stackSize;
 
-    var tcb1 = os.os_priorityQ.TaskCtrlBlk{
+    var tcb1 = os.Task{
         .stack = &stack,
         .stack_ptr = @intFromPtr(&stack[stack.len - 16]),
         .task_handler = &task,
@@ -88,7 +88,7 @@ export fn main() void {
         .towardTail = null,
     };
 
-    var tcb2 = os.os_priorityQ.TaskCtrlBlk{
+    var tcb2 = os.Task{
         .stack = &stack2,
         .stack_ptr = @intFromPtr(&stack2[stack2.len - 16]),
         .task_handler = &task2,
@@ -98,7 +98,7 @@ export fn main() void {
         .towardTail = null,
     };
 
-    var tcb3 = os.os_priorityQ.TaskCtrlBlk{
+    var tcb3 = os.Task{
         .stack = &stack3,
         .stack_ptr = @intFromPtr(&stack3[stack3.len - 16]),
         .task_handler = &task3,
@@ -108,7 +108,7 @@ export fn main() void {
         .towardTail = null,
     };
 
-    var tcb4 = os.os_priorityQ.TaskCtrlBlk{
+    var tcb4 = os.Task{
         .stack = &stack4,
         .stack_ptr = @intFromPtr(&stack4[stack4.len - 16]),
         .task_handler = &task4,
@@ -118,7 +118,7 @@ export fn main() void {
         .towardTail = null,
     };
 
-    var tcb5 = os.os_priorityQ.TaskCtrlBlk{
+    var tcb5 = os.Task{
         .stack = &stack5,
         .stack_ptr = @intFromPtr(&stack5[stack5.len - 16]),
         .task_handler = &task5,
@@ -128,7 +128,7 @@ export fn main() void {
         .towardTail = null,
     };
 
-    var tcb6 = os.os_priorityQ.TaskCtrlBlk{
+    var tcb6 = os.Task{
         .stack = &stack6,
         .stack_ptr = @intFromPtr(&stack6[stack6.len - 16]),
         .task_handler = &task6,
@@ -138,7 +138,7 @@ export fn main() void {
         .towardTail = null,
     };
 
-    var tcb7 = os.os_priorityQ.TaskCtrlBlk{
+    var tcb7 = os.Task{
         .stack = &stack7,
         .stack_ptr = @intFromPtr(&stack7[stack7.len - 16]),
         .task_handler = &task7,
@@ -164,8 +164,6 @@ var pcCom = zuart{ .m_uart_handle = &hal.huart2 };
 const std = @import("std");
 const builtin = @import("builtin");
 pub fn panic(msg: []const u8, _: ?*std.builtin.StackTrace, _: ?usize) noreturn {
-    asm volatile ("BKPT");
-
     pcCom.writeBlocking("--Panic--\n", 500) catch blk: {
         break :blk;
     };

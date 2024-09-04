@@ -1,5 +1,5 @@
-pub const os_priorityQ = @import("os_priorityQ.zig");
-const _Task = @import("os_priorityQ.zig").TaskCtrlBlk;
+const os_priorityQ = @import("os_priorityQ.zig");
+pub const Task = @import("os_task.zig").Task;
 
 //---------------Public API Start---------------//
 
@@ -7,19 +7,19 @@ pub fn startOS() void {
     core_SHPR3.* |= (isr_lowest_priority << pendSV_SHPR3_offset); //Set the pendsv to the lowest priority to avoid context switch during ISR
     core_SHPR3.* &= ~(isr_lowest_priority << sysTick_SHPR3_offset); //Set sysTick to the highest priority.
 
-    var idle_task = os_priorityQ.TaskCtrlBlk{
+    var idle_task = Task{
         .stack = &idle_stack,
         .stack_ptr = @intFromPtr(&idle_stack[idle_stack.len - 16]),
         .task_handler = &_idle_task_handler,
-        .priority = 31,
+        .priority = 0, //Idle task priority is ignored
         .blocked_time = 0,
         .towardHead = null,
         .towardTail = null,
     };
+    _init_stack(&idle_stack, idle_task.task_handler);
+    os_priorityQ.taskTable.addIdleTask(&idle_task);
 
     _os_started = true;
-    addTaskToOs(&idle_task);
-
     runScheduler(); //begin os
 
     //never reach here
@@ -33,7 +33,7 @@ pub fn startOS() void {
     }
 }
 
-pub fn addTaskToOs(tcb: *_Task) void {
+pub fn addTaskToOs(tcb: *Task) void {
     _init_stack(tcb.stack, tcb.task_handler);
     os_priorityQ.taskTable.addActive(tcb);
 }
@@ -67,6 +67,14 @@ const isr_lowest_priority: u32 = 0xFF;
 const pendSV_SHPR3_offset: u32 = 16;
 const sysTick_SHPR3_offset: u32 = 24;
 
+fn forceISRInclusion(val: anytype) void {
+    asm volatile (""
+        :
+        : [val] "m" (val),
+        : "memory"
+    );
+}
+
 const IDLE_STACK_SIZE: u32 = 50;
 var idle_stack: [IDLE_STACK_SIZE]u32 = [_]u32{0xDEADC0DE} ** IDLE_STACK_SIZE;
 
@@ -77,17 +85,9 @@ fn _idle_task_handler() callconv(.C) void {
     }
 }
 
-fn forceISRInclusion(val: anytype) void {
-    asm volatile (""
-        :
-        : [val] "m" (val),
-        : "memory"
-    );
-}
-
 //todo set both of these to the idle task
-var _current_task: ?*volatile _Task = null;
-var _next_task: *volatile _Task = undefined;
+var _current_task: ?*volatile Task = null;
+var _next_task: *volatile Task = undefined;
 var _os_started: bool = false;
 
 pub fn _schedule() void {
