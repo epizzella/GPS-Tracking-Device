@@ -161,11 +161,10 @@ export fn main() void {
     os.startOS(.{});
 }
 
-var pcCom = zuart{ .m_uart_handle = &hal.huart2 };
-
 const std = @import("std");
 const builtin = @import("builtin");
 pub fn panic(msg: []const u8, _: ?*std.builtin.StackTrace, _: ?usize) noreturn {
+    var pcCom = zuart{ .m_uart_handle = &hal.huart2 };
     pcCom.writeBlocking("--Panic--\n", 500) catch blk: {
         break :blk;
     };

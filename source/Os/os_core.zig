@@ -82,7 +82,7 @@ const C_DEBUGEN_MSK: u32 = 0x1;
 
 var _os_config: OsConfig = .{};
 
-const DEFAULT_IDLE_TASK_SIZE = 16;
+const DEFAULT_IDLE_TASK_SIZE = 17;
 pub const OsConfig = struct {
     idle_task_subroutine: ?*const fn () callconv(.C) void = null,
     idle_stack_size: u32 = DEFAULT_IDLE_TASK_SIZE,

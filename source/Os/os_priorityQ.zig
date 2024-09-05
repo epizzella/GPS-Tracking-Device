@@ -15,7 +15,7 @@ const TaskControlTable = struct {
     ///Add task to the active task queue
     pub fn addActive(self: *TaskControlTable, task: *Task) void {
         self.table[task.priority].active_tasks.append(task);
-        self.readyMask |= (one << PRIO_ADJUST - task.priority);
+        self.readyMask |= (one << (PRIO_ADJUST - task.priority));
     }
 
     ///Add task to the yielded task queue
