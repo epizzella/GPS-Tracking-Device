@@ -4,11 +4,13 @@ const zgpio = @import("Zwrapper/gpio_wrapper.zig").Zgpio;
 const zuitl = @import("Zwrapper/util_wrapper.zig").Zutil;
 const os = @import("Os/os_core.zig");
 
+const blink = 500;
+
 fn task() callconv(.C) void {
     const led = zgpio{ .m_port = hal.GPIOC, .m_pin = hal.GPIO_PIN_13 };
     while (true) {
         led.TogglePin();
-        os.delay(500);
+        os.delay(blink);
     }
 }
 
@@ -16,7 +18,7 @@ fn task2() callconv(.C) void {
     const led = zgpio{ .m_port = hal.GPIOA, .m_pin = hal.GPIO_PIN_6 };
     while (true) {
         led.TogglePin();
-        os.delay(100);
+        os.delay(blink);
     }
 }
 
@@ -24,7 +26,7 @@ fn task3() callconv(.C) void {
     const led = zgpio{ .m_port = hal.GPIOA, .m_pin = hal.GPIO_PIN_8 };
     while (true) {
         led.TogglePin();
-        os.delay(200);
+        os.delay(blink);
     }
 }
 
@@ -32,7 +34,7 @@ fn task4() callconv(.C) void {
     const led = zgpio{ .m_port = hal.GPIOA, .m_pin = hal.GPIO_PIN_9 };
     while (true) {
         led.TogglePin();
-        os.delay(300);
+        os.delay(blink);
     }
 }
 
@@ -40,7 +42,7 @@ fn task5() callconv(.C) void {
     const led = zgpio{ .m_port = hal.GPIOA, .m_pin = hal.GPIO_PIN_10 };
     while (true) {
         led.TogglePin();
-        os.delay(400);
+        os.delay(blink);
     }
 }
 
@@ -48,7 +50,7 @@ fn task6() callconv(.C) void {
     const led = zgpio{ .m_port = hal.GPIOA, .m_pin = hal.GPIO_PIN_11 };
     while (true) {
         led.TogglePin();
-        os.delay(500);
+        os.delay(blink);
     }
 }
 
@@ -56,7 +58,7 @@ fn task7() callconv(.C) void {
     const led = zgpio{ .m_port = hal.GPIOA, .m_pin = hal.GPIO_PIN_12 };
     while (true) {
         led.TogglePin();
-        os.delay(600);
+        os.delay(blink);
     }
 }
 
@@ -81,8 +83,8 @@ export fn main() void {
     var tcb1 = os.Task{
         .stack = &stack,
         .stack_ptr = @intFromPtr(&stack[stack.len - 16]),
-        .task_handler = &task,
-        .priority = 5,
+        .subroutine = &task,
+        .priority = 1,
         .blocked_time = 0,
         .towardHead = null,
         .towardTail = null,
@@ -91,8 +93,8 @@ export fn main() void {
     var tcb2 = os.Task{
         .stack = &stack2,
         .stack_ptr = @intFromPtr(&stack2[stack2.len - 16]),
-        .task_handler = &task2,
-        .priority = 5,
+        .subroutine = &task2,
+        .priority = 2,
         .blocked_time = 0,
         .towardHead = null,
         .towardTail = null,
@@ -101,8 +103,8 @@ export fn main() void {
     var tcb3 = os.Task{
         .stack = &stack3,
         .stack_ptr = @intFromPtr(&stack3[stack3.len - 16]),
-        .task_handler = &task3,
-        .priority = 5,
+        .subroutine = &task3,
+        .priority = 3,
         .blocked_time = 0,
         .towardHead = null,
         .towardTail = null,
@@ -111,8 +113,8 @@ export fn main() void {
     var tcb4 = os.Task{
         .stack = &stack4,
         .stack_ptr = @intFromPtr(&stack4[stack4.len - 16]),
-        .task_handler = &task4,
-        .priority = 6,
+        .subroutine = &task4,
+        .priority = 4,
         .blocked_time = 0,
         .towardHead = null,
         .towardTail = null,
@@ -121,8 +123,8 @@ export fn main() void {
     var tcb5 = os.Task{
         .stack = &stack5,
         .stack_ptr = @intFromPtr(&stack5[stack5.len - 16]),
-        .task_handler = &task5,
-        .priority = 6,
+        .subroutine = &task5,
+        .priority = 5,
         .blocked_time = 0,
         .towardHead = null,
         .towardTail = null,
@@ -131,7 +133,7 @@ export fn main() void {
     var tcb6 = os.Task{
         .stack = &stack6,
         .stack_ptr = @intFromPtr(&stack6[stack6.len - 16]),
-        .task_handler = &task6,
+        .subroutine = &task6,
         .priority = 6,
         .blocked_time = 0,
         .towardHead = null,
@@ -141,8 +143,8 @@ export fn main() void {
     var tcb7 = os.Task{
         .stack = &stack7,
         .stack_ptr = @intFromPtr(&stack7[stack7.len - 16]),
-        .task_handler = &task7,
-        .priority = 13,
+        .subroutine = &task7,
+        .priority = 7,
         .blocked_time = 0,
         .towardHead = null,
         .towardTail = null,
@@ -156,7 +158,7 @@ export fn main() void {
     os.addTaskToOs(&tcb6);
     os.addTaskToOs(&tcb7);
 
-    os.startOS();
+    os.startOS(.{});
 }
 
 var pcCom = zuart{ .m_uart_handle = &hal.huart2 };
