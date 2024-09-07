@@ -10,7 +10,7 @@ pub fn startOS(comptime os_config: OsConfig) void {
                 @compileError("Idle stack size cannont be less than the default value.");
             }
 
-            if (os_config.idle_task_subroutine) {
+            if (os_config.idle_task_subroutine != null) {
                 if (os_config.idle_stack_size <= DEFAULT_IDLE_TASK_SIZE) {
                     @compileError("Idle stack size must be greater than default size when an idle stack subroutine is provided.");
                 }
@@ -26,11 +26,12 @@ pub fn startOS(comptime os_config: OsConfig) void {
         var idle_task = Task{
             .stack = &idle_stack,
             .stack_ptr = @intFromPtr(&idle_stack[idle_stack.len - 16]),
-            .subroutine = if (os_config.idle_task_subroutine != null) os_config.idle_task_subroutine else &_idle_subroutine,
+            .subroutine = if (os_config.idle_task_subroutine) |user_idle| user_idle else &_idle_subroutine,
             .priority = 0, //Idle task priority is ignored
             .blocked_time = 0,
-            .towardHead = null,
-            .towardTail = null,
+            .name = "idleTask",
+            .to_head = null,
+            .to_tail = null,
         };
         _init_stack(&idle_stack, idle_task.subroutine);
         os_priorityQ.taskTable.addIdleTask(&idle_task);
@@ -84,9 +85,9 @@ var _os_config: OsConfig = .{};
 
 const DEFAULT_IDLE_TASK_SIZE = 17;
 pub const OsConfig = struct {
-    idle_task_subroutine: ?*const fn () callconv(.C) void = null,
+    idle_task_subroutine: ?*const fn () void = null,
     idle_stack_size: u32 = DEFAULT_IDLE_TASK_SIZE,
-    sysTick_callback: ?*const fn () callconv(.C) void = null,
+    sysTick_callback: ?*const fn () void = null,
 };
 
 fn forceISRInclusion(val: anytype) void {
@@ -127,7 +128,7 @@ pub inline fn _tick() void {
     }
 }
 
-fn _init_stack(stack: []u32, subroutine: *const fn () callconv(.C) void) void {
+fn _init_stack(stack: []u32, subroutine: *const fn () void) void {
     stack.ptr[stack.len - 1] = 0x1 << 24; // xPSR
     stack.ptr[stack.len - 2] = @intFromPtr(subroutine); //PC
 }
@@ -156,9 +157,7 @@ pub inline fn _context_swtich() void {
     );
 }
 
-extern var uwTick: c_uint;
 export fn SysTick_Handler() void {
-    uwTick += 1; //adding 1 counts up at 1ms
     if (_os_config.sysTick_callback) |callback| {
         callback();
     }
@@ -173,4 +172,11 @@ export fn SVC_Handler() void {
     criticalStart();
     _schedule();
     criticalEnd();
+}
+
+const comptime_test = cptTest(5);
+const comptime_test2 = cptTest(comptime_test);
+
+fn cptTest(comptime value: u8) u8 {
+    return value;
 }

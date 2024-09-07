@@ -86,7 +86,7 @@ const TaskControlTable = struct {
                         self.addActive(task);
                     }
 
-                    if (task.towardTail) |next| {
+                    if (task.to_tail) |next| {
                         task = next;
                     } else {
                         break;
@@ -119,9 +119,9 @@ const taskQueue = struct {
             self.tail = task;
         } else {
             if (self.tail) |tail| {
-                task.towardHead = tail;
-                tail.towardTail = task;
-                task.towardTail = null;
+                task.to_head = tail;
+                tail.to_tail = task;
+                task.to_tail = null;
             }
         }
 
@@ -134,9 +134,9 @@ const taskQueue = struct {
         var rtn: ?*Task = null;
         if (self.head) |head| {
             rtn = head;
-            head = head.towardTail;
-            head.towardHead = null;
-            rtn.?.towardTail = null;
+            head = head.to_tail;
+            head.to_head = null;
+            rtn.?.to_tail = null;
             if (self.elements == 0) {
                 asm volatile ("BKPT");
             }
@@ -149,14 +149,14 @@ const taskQueue = struct {
     pub fn contains(self: taskQueue, task: *Task) bool {
         var rtn = false;
         if (self.head) |head| {
-            var currenttask: *Task = head;
+            var current_task: *Task = head;
             while (true) {
-                if (currenttask == task) {
+                if (current_task == task) {
                     rtn = true;
                     break;
                 }
-                if (currenttask.towardTail) |next| {
-                    currenttask = next;
+                if (current_task.to_tail) |next| {
+                    current_task = next;
                 } else {
                     break;
                 }
@@ -175,26 +175,26 @@ const taskQueue = struct {
                 self.head = null;
                 self.tail = null;
             } else if (self.head == task) {
-                if (task.towardTail) |towardTail| {
+                if (task.to_tail) |towardTail| {
                     self.head = towardTail;
-                    towardTail.towardHead = null;
+                    towardTail.to_head = null;
                 }
             } else if (self.tail == task) {
-                if (task.towardHead) |towardHead| {
+                if (task.to_head) |towardHead| {
                     self.tail = towardHead;
-                    towardHead.towardTail = null;
+                    towardHead.to_tail = null;
                 }
             } else {
-                if (task.towardHead) |towardHead| {
-                    towardHead.towardTail = task.towardTail;
+                if (task.to_head) |towardHead| {
+                    towardHead.to_tail = task.to_tail;
                 }
-                if (task.towardTail) |towardTail| {
-                    towardTail.towardHead = task.towardHead;
+                if (task.to_tail) |towardTail| {
+                    towardTail.to_head = task.to_head;
                 }
             }
 
-            task.towardHead = null;
-            task.towardTail = null;
+            task.to_head = null;
+            task.to_tail = null;
 
             self.elements -= 1;
             rtn = true;
@@ -208,12 +208,12 @@ const taskQueue = struct {
         if (self.head != self.tail) {
             if (self.head != null and self.tail != null) {
                 const temp = self.head;
-                self.head.?.towardTail.?.towardHead = null;
-                self.head = self.head.?.towardTail;
+                self.head.?.to_tail.?.to_head = null;
+                self.head = self.head.?.to_tail;
 
-                temp.?.towardTail = null;
-                self.tail.?.towardTail = temp;
-                temp.?.towardHead = self.tail;
+                temp.?.to_tail = null;
+                self.tail.?.to_tail = temp;
+                temp.?.to_head = self.tail;
                 self.tail = temp;
             }
         }

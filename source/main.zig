@@ -6,15 +6,15 @@ const os = @import("Os/os_core.zig");
 
 const blink = 500;
 
-fn task() callconv(.C) void {
+fn idleTask() void {
     const led = zgpio{ .m_port = hal.GPIOC, .m_pin = hal.GPIO_PIN_13 };
     while (true) {
         led.TogglePin();
-        os.delay(blink);
+        zuitl.delay(500);
     }
 }
 
-fn task2() callconv(.C) void {
+fn task1() void {
     const led = zgpio{ .m_port = hal.GPIOA, .m_pin = hal.GPIO_PIN_6 };
     while (true) {
         led.TogglePin();
@@ -22,40 +22,8 @@ fn task2() callconv(.C) void {
     }
 }
 
-fn task3() callconv(.C) void {
+fn task2() void {
     const led = zgpio{ .m_port = hal.GPIOA, .m_pin = hal.GPIO_PIN_8 };
-    while (true) {
-        led.TogglePin();
-        os.delay(blink);
-    }
-}
-
-fn task4() callconv(.C) void {
-    const led = zgpio{ .m_port = hal.GPIOA, .m_pin = hal.GPIO_PIN_9 };
-    while (true) {
-        led.TogglePin();
-        os.delay(blink);
-    }
-}
-
-fn task5() callconv(.C) void {
-    const led = zgpio{ .m_port = hal.GPIOA, .m_pin = hal.GPIO_PIN_10 };
-    while (true) {
-        led.TogglePin();
-        os.delay(blink);
-    }
-}
-
-fn task6() callconv(.C) void {
-    const led = zgpio{ .m_port = hal.GPIOA, .m_pin = hal.GPIO_PIN_11 };
-    while (true) {
-        led.TogglePin();
-        os.delay(blink);
-    }
-}
-
-fn task7() callconv(.C) void {
-    const led = zgpio{ .m_port = hal.GPIOA, .m_pin = hal.GPIO_PIN_12 };
     while (true) {
         led.TogglePin();
         os.delay(blink);
@@ -71,94 +39,45 @@ export fn main() void {
     _ = hal.MX_TIM3_Init();
     _ = hal.MX_TIM4_Init();
 
-    const stackSize = 50;
-    var stack: [stackSize]u32 = [_]u32{0xDEADC0DE} ** stackSize;
+    const stackSize = 25;
+    var stack1: [stackSize]u32 = [_]u32{0xDEADC0DE} ** stackSize;
     var stack2: [stackSize]u32 = [_]u32{0xDEADC0DE} ** stackSize;
-    var stack3: [stackSize]u32 = [_]u32{0xDEADC0DE} ** stackSize;
-    var stack4: [stackSize]u32 = [_]u32{0xDEADC0DE} ** stackSize;
-    var stack5: [stackSize]u32 = [_]u32{0xDEADC0DE} ** stackSize;
-    var stack6: [stackSize]u32 = [_]u32{0xDEADC0DE} ** stackSize;
-    var stack7: [stackSize]u32 = [_]u32{0xDEADC0DE} ** stackSize;
 
     var tcb1 = os.Task{
-        .stack = &stack,
-        .stack_ptr = @intFromPtr(&stack[stack.len - 16]),
-        .subroutine = &task,
-        .priority = 1,
+        .stack = &stack1,
+        .stack_ptr = @intFromPtr(&stack1[stack1.len - 16]),
+        .subroutine = &task1,
+        .priority = 2,
         .blocked_time = 0,
-        .towardHead = null,
-        .towardTail = null,
+        .name = "task1",
+        .to_head = null,
+        .to_tail = null,
     };
 
     var tcb2 = os.Task{
         .stack = &stack2,
         .stack_ptr = @intFromPtr(&stack2[stack2.len - 16]),
         .subroutine = &task2,
-        .priority = 2,
-        .blocked_time = 0,
-        .towardHead = null,
-        .towardTail = null,
-    };
-
-    var tcb3 = os.Task{
-        .stack = &stack3,
-        .stack_ptr = @intFromPtr(&stack3[stack3.len - 16]),
-        .subroutine = &task3,
         .priority = 3,
         .blocked_time = 0,
-        .towardHead = null,
-        .towardTail = null,
-    };
-
-    var tcb4 = os.Task{
-        .stack = &stack4,
-        .stack_ptr = @intFromPtr(&stack4[stack4.len - 16]),
-        .subroutine = &task4,
-        .priority = 4,
-        .blocked_time = 0,
-        .towardHead = null,
-        .towardTail = null,
-    };
-
-    var tcb5 = os.Task{
-        .stack = &stack5,
-        .stack_ptr = @intFromPtr(&stack5[stack5.len - 16]),
-        .subroutine = &task5,
-        .priority = 5,
-        .blocked_time = 0,
-        .towardHead = null,
-        .towardTail = null,
-    };
-
-    var tcb6 = os.Task{
-        .stack = &stack6,
-        .stack_ptr = @intFromPtr(&stack6[stack6.len - 16]),
-        .subroutine = &task6,
-        .priority = 6,
-        .blocked_time = 0,
-        .towardHead = null,
-        .towardTail = null,
-    };
-
-    var tcb7 = os.Task{
-        .stack = &stack7,
-        .stack_ptr = @intFromPtr(&stack7[stack7.len - 16]),
-        .subroutine = &task7,
-        .priority = 7,
-        .blocked_time = 0,
-        .towardHead = null,
-        .towardTail = null,
+        .name = "task2",
+        .to_head = null,
+        .to_tail = null,
     };
 
     os.addTaskToOs(&tcb1);
     os.addTaskToOs(&tcb2);
-    os.addTaskToOs(&tcb3);
-    os.addTaskToOs(&tcb4);
-    os.addTaskToOs(&tcb5);
-    os.addTaskToOs(&tcb6);
-    os.addTaskToOs(&tcb7);
 
-    os.startOS(.{});
+    os.startOS(.{
+        .idle_task_subroutine = &idleTask,
+        .idle_stack_size = 25,
+        .sysTick_callback = &incTick,
+    });
+}
+
+extern var uwTick: c_uint;
+fn incTick() void {
+    uwTick += 1;
 }
 
 const std = @import("std");
