@@ -45,8 +45,8 @@ void NMI_Handler(void)
   */
 void HardFault_Handler(void)
 {
-  uint32_t cfsr = *(uint32_t*)0xE000ED28;
-  uint32_t hfsr = *(uint32_t*)0xE000ED2C;
+  volatile uint32_t cfsr = *(uint32_t*)0xE000ED28;
+  volatile uint32_t hfsr = *(uint32_t*)0xE000ED2C;
   while (1)
   {
     __asm__("BKPT");

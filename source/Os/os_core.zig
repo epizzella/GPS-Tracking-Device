@@ -1,18 +1,32 @@
-const os_priorityQ = @import("os_priorityQ.zig");
-pub const Task = @import("os_task.zig").Task;
+const OS_TASK = @import("os_task.zig");
+pub const Task = OS_TASK.Task;
+const task_ctrl_tbl = &OS_TASK.task_control_table;
+const OS_TYPES = @import("os_objects.zig");
 
 //---------------Public API Start---------------//
 
-pub fn startOS(comptime os_config: OsConfig) void {
-    if (_os_started == false) {
+pub fn create_task(config: OS_TASK.TaskConfig) OS_TYPES.TaskQueue.OsObject {
+    return OS_TYPES.TaskQueue.OsObject{
+        .name = config.name,
+        ._data = Task._create_task(config),
+    };
+}
+
+pub fn addTaskToOs(task: *OS_TASK.TaskQueue.OsObject) void {
+    task_ctrl_tbl.addActive(task);
+}
+
+export var g_stack_offset: u32 = 0x08;
+pub fn startOS(comptime config: OsConfig) void {
+    if (os_started == false) {
         comptime {
-            if (os_config.idle_stack_size < DEFAULT_IDLE_TASK_SIZE) {
-                @compileError("Idle stack size cannont be less than the default value.");
+            if (config.idle_stack_size < DEFAULT_IDLE_TASK_SIZE) {
+                @compileError("Idle stack size cannont be less than the default stack size: " ++ DEFAULT_IDLE_TASK_SIZE);
             }
 
-            if (os_config.idle_task_subroutine != null) {
-                if (os_config.idle_stack_size <= DEFAULT_IDLE_TASK_SIZE) {
-                    @compileError("Idle stack size must be greater than default size when an idle stack subroutine is provided.");
+            if (config.idle_task_subroutine != null) {
+                if (config.idle_stack_size <= DEFAULT_IDLE_TASK_SIZE) {
+                    @compileError("Idle stack size must be greater than default size(" ++ DEFAULT_IDLE_TASK_SIZE ++ ") when an idle stack subroutine is provided");
                 }
             }
         }
@@ -20,25 +34,26 @@ pub fn startOS(comptime os_config: OsConfig) void {
         ARM_SHPR3.* |= ISR_LOWEST_PRIO; //Set the pendsv to the lowest priority to avoid context switch during ISR
         ARM_SHPR3.* &= ~SYSTICK_SHPR3_MSK; //Set sysTick to the highest priority.
 
-        _os_config = os_config;
+        os_config = config;
 
-        var idle_stack: [os_config.idle_stack_size]u32 = [_]u32{0xDEADC0DE} ** os_config.idle_stack_size;
-        var idle_task = Task{
-            .stack = &idle_stack,
-            .stack_ptr = @intFromPtr(&idle_stack[idle_stack.len - 16]),
-            .subroutine = if (os_config.idle_task_subroutine) |user_idle| user_idle else &_idle_subroutine,
+        var idle_stack: [config.idle_stack_size]u32 = [_]u32{0xDEADC0DE} ** config.idle_stack_size;
+
+        var idle_task = create_task(.{
+            .name = "idle task",
             .priority = 0, //Idle task priority is ignored
-            .blocked_time = 0,
-            .name = "idleTask",
-            .to_head = null,
-            .to_tail = null,
-        };
-        _init_stack(&idle_stack, idle_task.subroutine);
-        os_priorityQ.taskTable.addIdleTask(&idle_task);
+            .stack = &idle_stack,
+            .subroutine = if (config.idle_task_subroutine) |user_idle| user_idle else &_idle_subroutine,
+        });
 
-        _os_started = true;
+        task_ctrl_tbl.addIdleTask(&idle_task);
+
+        //Find offset to stack ptr as zig does not guarantee struct field order
+        g_stack_offset = @abs(@intFromPtr(&idle_task._data.stack_ptr) -% @intFromPtr(&idle_task));
+
+        os_started = true;
         runScheduler(); //begin os
 
+        //if debugger is attached hit this breakpoint if we somehow return from os
         if ((ARM_DHCSR.* & C_DEBUGEN_MSK) > 0) {
             asm volatile ("BKPT");
         }
@@ -47,16 +62,11 @@ pub fn startOS(comptime os_config: OsConfig) void {
     }
 }
 
-pub fn addTaskToOs(task: *Task) void {
-    _init_stack(task.stack, task.subroutine);
-    os_priorityQ.taskTable.addActive(task);
-}
-
 pub fn delay(time_ms: u32) void {
-    if (_current_task) |c_task| {
-        c_task.blocked_time = time_ms;
-        os_priorityQ.taskTable.removeActive(@volatileCast(c_task));
-        os_priorityQ.taskTable.addYeilded(@volatileCast(c_task));
+    if (task_ctrl_tbl.table[task_ctrl_tbl.runningPrio].active_tasks.head) |c_task| {
+        c_task._data.blocked_time = time_ms;
+        task_ctrl_tbl.removeActive(@volatileCast(c_task));
+        task_ctrl_tbl.addYeilded(@volatileCast(c_task));
         runScheduler();
     }
 }
@@ -81,7 +91,7 @@ const PENDSV_SHPR3_MSK: u32 = ISR_LOWEST_PRIO << 16;
 const SYSTICK_SHPR3_MSK: u32 = ISR_LOWEST_PRIO << 24;
 const C_DEBUGEN_MSK: u32 = 0x1;
 
-var _os_config: OsConfig = .{};
+var os_config: OsConfig = .{};
 
 const DEFAULT_IDLE_TASK_SIZE = 17;
 pub const OsConfig = struct {
@@ -98,7 +108,7 @@ fn forceISRInclusion(val: anytype) void {
     );
 }
 
-inline fn runScheduler() void {
+pub inline fn runScheduler() void {
     asm volatile ("SVC      #0");
 }
 
@@ -107,76 +117,37 @@ fn _idle_subroutine() callconv(.C) void {
 }
 
 //todo set both of these to the idle task
-var _current_task: ?*volatile Task = null;
-var _next_task: *volatile Task = undefined;
-var _os_started: bool = false;
+export var current_task: ?*volatile OS_TASK.TaskQueue.OsObject = null;
+export var next_task: *volatile OS_TASK.TaskQueue.OsObject = undefined;
 
-pub fn _schedule() void {
-    _next_task = os_priorityQ.taskTable.getNextReadyTask();
+var os_started: bool = false;
 
-    if (_current_task != _next_task) {
+fn schedule() void {
+    next_task = task_ctrl_tbl.getNextReadyTask();
+
+    if (current_task != next_task) {
         ARM_ICSR.* |= 1 << 28; //run context switch
     }
 }
 
 ///Call from inside SysTick_Handler
-pub inline fn _tick() void {
-    if (_os_started) {
-        os_priorityQ.taskTable.updateTasksDelay();
-        os_priorityQ.taskTable.cycleActive();
-        _schedule();
+inline fn tick() void {
+    if (os_started) {
+        task_ctrl_tbl.updateTasksDelay();
+        task_ctrl_tbl.cycleActive();
+        schedule();
     }
-}
-
-fn _init_stack(stack: []u32, subroutine: *const fn () void) void {
-    stack.ptr[stack.len - 1] = 0x1 << 24; // xPSR
-    stack.ptr[stack.len - 2] = @intFromPtr(subroutine); //PC
-}
-
-//Call from inside PendSV_Handler
-pub inline fn _context_swtich() void {
-    asm volatile ("                                 \n" ++
-            "  CPSID    I                           \n" ++ //disable interrupts
-            "  cmp.w %[curr_task], #0               \n" ++ //if current_task != null
-            "  beq.n SpEqlNextSp                    \n" ++
-            "  PUSH     {r4-r11}                    \n" ++ //push registers r4-r11 on the stack
-            "  STR      sp, [%[curr_task],#0x08]    \n" ++ //save the current stack pointer in current_task
-            "SpEqlNextSp:                           \n" ++
-            "  LDR      sp, [%[next_task],#0x08]    \n" //Set stack pointer to next_task stack pointer
-        : //no return
-        : [curr_task] "l" (_current_task),
-          [next_task] "l" (_next_task),
-    );
-
-    _current_task = _next_task;
-
-    asm volatile ("                     \n" ++
-            "  POP      {r4-r11}        \n" ++ //pop registers r4-r11
-            "  CPSIE    I               \n" ++ //enable interrupts
-            "  BX       lr              \n" //return to the next thread
-    );
 }
 
 export fn SysTick_Handler() void {
-    if (_os_config.sysTick_callback) |callback| {
+    if (os_config.sysTick_callback) |callback| {
         callback();
     }
-    _tick();
-}
-
-export fn PendSV_Handler() void {
-    _context_swtich();
+    tick();
 }
 
 export fn SVC_Handler() void {
     criticalStart();
-    _schedule();
+    schedule();
     criticalEnd();
-}
-
-const comptime_test = cptTest(5);
-const comptime_test2 = cptTest(comptime_test);
-
-fn cptTest(comptime value: u8) u8 {
-    return value;
 }

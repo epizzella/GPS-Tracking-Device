@@ -10,7 +10,7 @@ fn idleTask() void {
     const led = zgpio{ .m_port = hal.GPIOC, .m_pin = hal.GPIO_PIN_13 };
     while (true) {
         led.TogglePin();
-        zuitl.delay(500);
+        zuitl.delay(1000);
     }
 }
 
@@ -43,27 +43,19 @@ export fn main() void {
     var stack1: [stackSize]u32 = [_]u32{0xDEADC0DE} ** stackSize;
     var stack2: [stackSize]u32 = [_]u32{0xDEADC0DE} ** stackSize;
 
-    var tcb1 = os.Task{
-        .stack = &stack1,
-        .stack_ptr = @intFromPtr(&stack1[stack1.len - 16]),
-        .subroutine = &task1,
-        .priority = 2,
-        .blocked_time = 0,
+    var tcb1 = os.create_task(.{
         .name = "task1",
-        .to_head = null,
-        .to_tail = null,
-    };
+        .priority = 2,
+        .stack = &stack1,
+        .subroutine = &task1,
+    });
 
-    var tcb2 = os.Task{
-        .stack = &stack2,
-        .stack_ptr = @intFromPtr(&stack2[stack2.len - 16]),
-        .subroutine = &task2,
-        .priority = 3,
-        .blocked_time = 0,
+    var tcb2 = os.create_task(.{
         .name = "task2",
-        .to_head = null,
-        .to_tail = null,
-    };
+        .priority = 3,
+        .stack = &stack2,
+        .subroutine = &task2,
+    });
 
     os.addTaskToOs(&tcb1);
     os.addTaskToOs(&tcb2);
