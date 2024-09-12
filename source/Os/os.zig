@@ -1,5 +1,4 @@
 const OS_TASK = @import("os_task.zig");
-const OS_TYPES = @import("os_objects.zig");
 const OS_CORE = @import("os_core.zig");
 const ARCH = @import("arch/arm-cortex-m/common/arch.zig");
 
@@ -9,11 +8,11 @@ pub const coreInit = ARCH.coreInit;
 
 const DEFAULT_IDLE_TASK_SIZE = 17;
 
-const task_ctrl_tbl = &OS_TASK.task_control_table;
+const task_ctrl_tbl = &OS_TASK.task_control;
 
 ///Returns a new task.
-pub fn create_task(config: OS_TASK.TaskConfig) OS_TYPES.TaskQueue.OsObject {
-    return OS_TYPES.TaskQueue.OsObject{
+pub fn create_task(config: OS_TASK.TaskConfig) OS_TASK.TaskQueue.OsObject {
+    return OS_TASK.TaskQueue.OsObject{
         .name = config.name,
         ._data = Task._create_task(config),
     };
@@ -53,18 +52,18 @@ pub fn startOS(comptime config: OsConfig) void {
         OS_CORE._setOsStarted();
         ARCH.runScheduler(); //begin os
 
-        //if debugger is attache(d hit this breakpoint if we somehow return from os
         if (ARCH.isDebugAttached()) {
-            asm volatile ("BKPT");
+            @breakpoint();
         }
 
         unreachable;
     }
 }
 
-///Put the active task to sleep.  It will become ready to run again in `time_ms `milliseconds
+///Put the active task to sleep.  It will become ready to run again `time_ms` milliseconds later
 pub fn delay(time_ms: u32) void {
     if (task_ctrl_tbl.table[task_ctrl_tbl.runningPrio].active_tasks.head) |c_task| {
+        //TODO: check if c_task is idle task and throw an error if so
         c_task._data.blocked_time = time_ms;
         task_ctrl_tbl.removeActive(@volatileCast(c_task));
         task_ctrl_tbl.addYeilded(@volatileCast(c_task));

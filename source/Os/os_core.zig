@@ -1,6 +1,5 @@
 const OS_TASK = @import("os_task.zig");
-const task_ctrl_tbl = &OS_TASK.task_control_table;
-const OS_TYPES = @import("os_objects.zig");
+const task_ctrl_tbl = &OS_TASK.task_control;
 
 const DEFAULT_IDLE_TASK_SIZE = 17;
 

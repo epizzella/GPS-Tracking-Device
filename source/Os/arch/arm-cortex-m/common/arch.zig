@@ -1,7 +1,7 @@
 const OS_TASK = @import("../../../os_task.zig");
 const OS_CORE = @import("../../../os_core.zig");
 
-const task_ctrl_tbl = &OS_TASK.task_control_table;
+const task_ctrl_tbl = &OS_TASK.task_control;
 const os_config = &OS_CORE._getOsConfig;
 const os_started = &OS_CORE._isOsStarted;
 

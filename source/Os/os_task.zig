@@ -33,7 +33,7 @@ pub const TaskConfig = struct {
     priority: u5,
 };
 
-pub var task_control_table: TaskControlTable = .{};
+pub var task_control: TaskControl = .{};
 
 const MAX_PRIO_LEVEL = 33; //32 user accessable priority levels + idle task at lowest priority level
 const IDLE_PRIORITY_LEVEL: u32 = 32; //idle task is the lowest priority.
@@ -41,7 +41,7 @@ const PRIO_ADJUST: u5 = 31;
 
 const one: u32 = 1;
 
-const TaskControlTable = struct {
+const TaskControl = struct {
     table: [MAX_PRIO_LEVEL]TaskStateQ = [_]TaskStateQ{.{}} ** MAX_PRIO_LEVEL,
     readyMask: u32 = 0, //mask of ready tasks
     previousPrio: u32 = 0xffffffff, //priority of the previously running task
@@ -51,23 +51,23 @@ const TaskControlTable = struct {
     export var next_task: *volatile TaskQueue.OsObject = undefined;
 
     ///Add task to the active task queue
-    pub fn addActive(self: *TaskControlTable, task: *TaskQueue.OsObject) void {
+    pub fn addActive(self: *TaskControl, task: *TaskQueue.OsObject) void {
         self.table[task._data.priority].active_tasks.append(task);
         self.readyMask |= one << (PRIO_ADJUST - task._data.priority);
     }
 
     ///Add task to the yielded task queue
-    pub fn addYeilded(self: *TaskControlTable, task: *TaskQueue.OsObject) void {
+    pub fn addYeilded(self: *TaskControl, task: *TaskQueue.OsObject) void {
         self.table[task._data.priority].yielded_task.append(task);
     }
 
     ///Add task to the suspended task queue
-    pub fn addSuspended(self: TaskControlTable, task: *TaskQueue.OsObject) void {
+    pub fn addSuspended(self: TaskControl, task: *TaskQueue.OsObject) void {
         self.table[task._data.priority].suspended_tasks.append(task);
     }
 
     ///Remove task from the active task queue
-    pub fn removeActive(self: *TaskControlTable, task: *TaskQueue.OsObject) void {
+    pub fn removeActive(self: *TaskControl, task: *TaskQueue.OsObject) void {
         _ = self.table[task._data.priority].active_tasks.remove(task);
         if (self.table[task._data.priority].active_tasks.head == null) {
             self.readyMask &= ~(one << (PRIO_ADJUST - task._data.priority));
@@ -75,36 +75,42 @@ const TaskControlTable = struct {
     }
 
     ///Remove task from the yielded task queue
-    pub fn removeYielded(self: *TaskControlTable, task: *TaskQueue.OsObject) void {
+    pub fn removeYielded(self: *TaskControl, task: *TaskQueue.OsObject) void {
         _ = self.table[task._data.priority].yielded_task.remove(task);
     }
 
     ///Remove task from the suspended task queue
-    pub fn removeSuspended(self: *TaskControlTable, task: *TaskQueue.OsObject) void {
+    pub fn removeSuspended(self: *TaskControl, task: *TaskQueue.OsObject) void {
         self.table[task._data.priority].suspended_tasks.remove(task);
     }
 
-    pub fn setRunningPriority(self: *TaskControlTable, prio: u32) void {
-        self.runningPrio = prio;
+    ///Pop the active task from its active queue
+    pub fn popActive(self: *TaskControl) ?*TaskQueue.OsObject {
+        const head = self.table[self.runningPrio].active_tasks.pop();
+        if (self.table[self.runningPrio].active_tasks.head == null) {
+            self.readyMask &= ~(one << (PRIO_ADJUST - self.runningPrio));
+        }
+
+        return head;
     }
 
-    pub fn cycleActive(self: *TaskControlTable) void {
+    pub fn cycleActive(self: *TaskControl) void {
         if (self.runningPrio < MAX_PRIO_LEVEL) {
             self.table[self.runningPrio].active_tasks.headToTail();
         }
     }
 
-    pub fn readyNextTask(self: *TaskControlTable) void {
+    pub fn readyNextTask(self: *TaskControl) void {
         self.runningPrio = ARCH.getReadyTaskIndex(self.readyMask);
         next_task = self.table[self.runningPrio].active_tasks.head.?;
     }
 
-    pub fn validSwitch(self: *TaskControlTable) bool {
+    pub fn validSwitch(self: *TaskControl) bool {
         _ = self;
         return current_task != next_task;
     }
 
-    pub fn updateTasksDelay(self: *TaskControlTable) void {
+    pub fn updateTasksDelay(self: *TaskControl) void {
         for (&self.table) |*taskState| {
             if (taskState.yielded_task.head) |head| {
                 var task = head;
@@ -130,7 +136,7 @@ const TaskControlTable = struct {
         }
     }
 
-    pub fn addIdleTask(self: *TaskControlTable, idle_task: *TaskQueue.OsObject) void {
+    pub fn addIdleTask(self: *TaskControl, idle_task: *TaskQueue.OsObject) void {
         self.table[IDLE_PRIORITY_LEVEL].active_tasks.append(idle_task);
     }
 };
