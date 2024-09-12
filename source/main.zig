@@ -2,7 +2,7 @@ const hal = @import("Zwrapper/hal_include.zig").stm32;
 const zuart = @import("Zwrapper/uart_wrapper.zig").Zuart;
 const zgpio = @import("Zwrapper/gpio_wrapper.zig").Zgpio;
 const zuitl = @import("Zwrapper/util_wrapper.zig").Zutil;
-const os = @import("Os/os_core.zig");
+const os = @import("Os/os.zig");
 
 const blink = 500;
 
@@ -59,7 +59,7 @@ export fn main() void {
 
     os.addTaskToOs(&tcb1);
     os.addTaskToOs(&tcb2);
-
+    os.coreInit();
     os.startOS(.{
         .idle_task_subroutine = &idleTask,
         .idle_stack_size = 25,
@@ -87,6 +87,6 @@ pub fn panic(msg: []const u8, _: ?*std.builtin.StackTrace, _: ?usize) noreturn {
     };
 
     while (true) {
-        asm volatile ("BKPT");
+        @breakpoint();
     }
 }

@@ -1,3 +1,4 @@
+const ARCH = @import("arch/arm-cortex-m/common/arch.zig");
 pub const TaskQueue = @import("util/linked_queue.zig").LinkedQueue(Task);
 
 pub const Task = struct {
@@ -46,6 +47,9 @@ const TaskControlTable = struct {
     previousPrio: u32 = 0xffffffff, //priority of the previously running task
     runningPrio: u32 = 0xffffffff, //priority level of the currently running task
 
+    export var current_task: ?*volatile TaskQueue.OsObject = null;
+    export var next_task: *volatile TaskQueue.OsObject = undefined;
+
     ///Add task to the active task queue
     pub fn addActive(self: *TaskControlTable, task: *TaskQueue.OsObject) void {
         self.table[task._data.priority].active_tasks.append(task);
@@ -90,18 +94,14 @@ const TaskControlTable = struct {
         }
     }
 
-    pub fn getNextReadyTask(self: *TaskControlTable) *TaskQueue.OsObject {
-        var ready: u32 = 0xffffffff;
-        const ready_msk = self.readyMask;
+    pub fn readyNextTask(self: *TaskControlTable) void {
+        self.runningPrio = ARCH.getReadyTaskIndex(self.readyMask);
+        next_task = self.table[self.runningPrio].active_tasks.head.?;
+    }
 
-        asm volatile ("clz    %[ready], %[mask]"
-            : [ready] "=l" (ready), //return
-            : [mask] "l" (ready_msk), //param
-        );
-
-        self.runningPrio = ready;
-
-        return self.table[ready].active_tasks.head.?;
+    pub fn validSwitch(self: *TaskControlTable) bool {
+        _ = self;
+        return current_task != next_task;
     }
 
     pub fn updateTasksDelay(self: *TaskControlTable) void {

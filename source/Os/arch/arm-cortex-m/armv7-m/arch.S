@@ -25,4 +25,3 @@ SpEqlNextSp:
     CPSIE   I                           /*enable interrupts*/
     BX      LR                          /*return to task*/
 .size PendSV_Handler, .-PendSV_Handler
-
