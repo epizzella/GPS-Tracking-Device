@@ -29,7 +29,7 @@ pub fn startOS(comptime config: OsConfig) void {
     if (OS_CORE._isOsStarted() == false) {
         comptime {
             if (config.idle_stack_size < DEFAULT_IDLE_TASK_SIZE) {
-                @compileError("Idle stack size cannont be less than the default stack size: " ++ DEFAULT_IDLE_TASK_SIZE);
+                @compileError("Idle stack size cannont be less than the default size.");
             }
         }
 

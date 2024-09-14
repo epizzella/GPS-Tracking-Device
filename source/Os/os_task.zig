@@ -1,4 +1,3 @@
-const ARCH = @import("arch/arm-cortex-m/common/arch.zig");
 pub const TaskQueue = @import("util/linked_queue.zig").LinkedQueue(Task);
 
 pub const Task = struct {
@@ -35,17 +34,16 @@ pub const TaskConfig = struct {
 
 pub var task_control: TaskControl = .{};
 
-const MAX_PRIO_LEVEL = 33; //32 user accessable priority levels + idle task at lowest priority level
-const IDLE_PRIORITY_LEVEL: u32 = 32; //idle task is the lowest priority.
+const MAX_PRIO_LEVEL = 33; // 32 user accessable priority levels + idle task at lowest priority level
+const IDLE_PRIORITY_LEVEL: u32 = 32; //     idle task is the lowest priority.
 const PRIO_ADJUST: u5 = 31;
 
-const one: u32 = 1;
+const ONE: u32 = 0x1;
 
 const TaskControl = struct {
     table: [MAX_PRIO_LEVEL]TaskStateQ = [_]TaskStateQ{.{}} ** MAX_PRIO_LEVEL,
-    readyMask: u32 = 0, //mask of ready tasks
-    previousPrio: u32 = 0xffffffff, //priority of the previously running task
-    runningPrio: u32 = 0xffffffff, //priority level of the currently running task
+    readyMask: u32 = 0, //      mask of ready tasks
+    runningPrio: u6 = 0x00, //  priority level of the currently running task
 
     export var current_task: ?*volatile TaskQueue.OsObject = null;
     export var next_task: *volatile TaskQueue.OsObject = undefined;
@@ -53,7 +51,7 @@ const TaskControl = struct {
     ///Add task to the active task queue
     pub fn addActive(self: *TaskControl, task: *TaskQueue.OsObject) void {
         self.table[task._data.priority].active_tasks.append(task);
-        self.readyMask |= one << (PRIO_ADJUST - task._data.priority);
+        self.readyMask |= ONE << (priorityAdjust[task._data.priority]);
     }
 
     ///Add task to the yielded task queue
@@ -70,7 +68,7 @@ const TaskControl = struct {
     pub fn removeActive(self: *TaskControl, task: *TaskQueue.OsObject) void {
         _ = self.table[task._data.priority].active_tasks.remove(task);
         if (self.table[task._data.priority].active_tasks.head == null) {
-            self.readyMask &= ~(one << (PRIO_ADJUST - task._data.priority));
+            self.readyMask &= ~(ONE << (priorityAdjust[task._data.priority]));
         }
     }
 
@@ -88,28 +86,32 @@ const TaskControl = struct {
     pub fn popActive(self: *TaskControl) ?*TaskQueue.OsObject {
         const head = self.table[self.runningPrio].active_tasks.pop();
         if (self.table[self.runningPrio].active_tasks.head == null) {
-            self.readyMask &= ~(one << (PRIO_ADJUST - self.runningPrio));
+            self.readyMask &= ~(ONE << (priorityAdjust[self.runningPrio]));
         }
 
         return head;
     }
 
+    ///Move the head task to the tail position of the active queue
     pub fn cycleActive(self: *TaskControl) void {
         if (self.runningPrio < MAX_PRIO_LEVEL) {
             self.table[self.runningPrio].active_tasks.headToTail();
         }
     }
 
+    ///Set `next_task` to the highest priority task that is ready to run
     pub fn readyNextTask(self: *TaskControl) void {
-        self.runningPrio = ARCH.getReadyTaskIndex(self.readyMask);
+        self.runningPrio = @clz(self.readyMask);
         next_task = self.table[self.runningPrio].active_tasks.head.?;
     }
 
+    ///Returns true if `current_task` and `next_task` are different
     pub fn validSwitch(self: *TaskControl) bool {
         _ = self;
         return current_task != next_task;
     }
 
+    ///Updates the delayed time for each sleeping task
     pub fn updateTasksDelay(self: *TaskControl) void {
         for (&self.table) |*taskState| {
             if (taskState.yielded_task.head) |head| {
@@ -139,6 +141,8 @@ const TaskControl = struct {
     pub fn addIdleTask(self: *TaskControl, idle_task: *TaskQueue.OsObject) void {
         self.table[IDLE_PRIORITY_LEVEL].active_tasks.append(idle_task);
     }
+
+    const priorityAdjust: [32]u5 = .{ 31, 30, 29, 28, 27, 26, 25, 24, 23, 22, 21, 20, 19, 18, 17, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0 };
 };
 
 const TaskStateQ = struct {

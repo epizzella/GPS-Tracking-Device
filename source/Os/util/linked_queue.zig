@@ -30,13 +30,14 @@ pub fn LinkedQueue(comptime T: type) type {
 
         ///Pop the head node from the queue
         pub fn pop(self: *Self) ?*OsObject {
-            var rtn: ?*OsObject = null;
-            if (self.head) |head| {
-                rtn = head;
-                head = head._to_tail;
-                head._to_head = null;
-                rtn.?._to_tail = null;
-                self.elements -= 1;
+            const rtn = self.head orelse return null;
+            self.head = rtn._to_tail;
+            rtn._to_tail = null;
+            self.elements -= 1;
+            if (self.head) |new_head| {
+                new_head._to_head = null;
+            } else {
+                self.tail = null;
             }
             return rtn;
         }

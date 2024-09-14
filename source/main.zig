@@ -3,8 +3,9 @@ const zuart = @import("Zwrapper/uart_wrapper.zig").Zuart;
 const zgpio = @import("Zwrapper/gpio_wrapper.zig").Zgpio;
 const zuitl = @import("Zwrapper/util_wrapper.zig").Zutil;
 const os = @import("Os/os.zig");
+const mutex = @import("./Os/os_mutex.zig");
 
-const blink = 500;
+const blink_time = 500;
 
 fn idleTask() void {
     const led = zgpio{ .m_port = hal.GPIOC, .m_pin = hal.GPIO_PIN_13 };
@@ -15,19 +16,25 @@ fn idleTask() void {
 }
 
 fn task1() void {
-    const led = zgpio{ .m_port = hal.GPIOA, .m_pin = hal.GPIO_PIN_6 };
     while (true) {
-        led.TogglePin();
-        os.delay(blink);
+        blink(.{ .m_port = hal.GPIOA, .m_pin = hal.GPIO_PIN_6 });
     }
 }
 
 fn task2() void {
-    const led = zgpio{ .m_port = hal.GPIOA, .m_pin = hal.GPIO_PIN_8 };
     while (true) {
-        led.TogglePin();
-        os.delay(blink);
+        blink(.{ .m_port = hal.GPIOA, .m_pin = hal.GPIO_PIN_8 });
     }
+}
+
+var led_mutex = mutex.Mutex.create_mutex("led_mutex");
+fn blink(gpio: zgpio) void {
+    led_mutex.acquire();
+    const led = gpio;
+    led.TogglePin();
+    os.delay(500);
+    led_mutex.release();
+    os.delay(1);
 }
 
 export fn main() void {
@@ -39,7 +46,7 @@ export fn main() void {
     _ = hal.MX_TIM3_Init();
     _ = hal.MX_TIM4_Init();
 
-    const stackSize = 25;
+    const stackSize = 500;
     var stack1: [stackSize]u32 = [_]u32{0xDEADC0DE} ** stackSize;
     var stack2: [stackSize]u32 = [_]u32{0xDEADC0DE} ** stackSize;
 
