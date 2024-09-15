@@ -2,8 +2,8 @@ const OS_TASK = @import("os_task.zig");
 const OS_CORE = @import("os_core.zig");
 const ARCH = @import("arch/arm-cortex-m/common/arch.zig");
 
-const TaskQueue = @import("util/linked_queue.zig").LinkedQueue(OS_TASK.Task);
-const Task = TaskQueue.OsObject;
+const TaskQueue = @import("util/task_queue.zig");
+const Task = TaskQueue.TaskHandle;
 const task_control = &OS_TASK.task_control;
 
 pub var mutex_control_table: MutexControleTable = .{};
@@ -11,7 +11,6 @@ pub var mutex_control_table: MutexControleTable = .{};
 const MutexControleTable = struct {};
 
 const Context = struct {
-    locked: bool = false,
     owner: ?*Task = null,
     pending: TaskQueue = .{},
 };
@@ -31,9 +30,12 @@ pub const Mutex = struct {
         if (ARCH.interruptActive()) @breakpoint(); //TODO: return an error
 
         ARCH.criticalStart();
-        if (self._context.locked) {
+        if (self._context.owner) |owner| {
+            //locked
+            _ = owner; //TODO: add priority inheritance check
+
             if (task_control.popActive()) |active| {
-                self._context.pending.append(active); //TODO: change to sorted insert
+                self._context.pending.insertSorted(active);
                 ARCH.criticalEnd();
                 ARCH.runScheduler();
                 ARCH.criticalStart();
@@ -43,8 +45,8 @@ pub const Mutex = struct {
                 //TODO: return error
             }
         } else {
+            //unlocked
             if (task_control.table[task_control.runningPrio].active_tasks.head) |c_task| {
-                self._context.locked = true;
                 self._context.owner = c_task;
             } else {
                 @breakpoint();
@@ -64,11 +66,11 @@ pub const Mutex = struct {
                 self._context.owner = self._context.pending.head;
                 if (self._context.pending.pop()) |head| {
                     task_control.addActive(head);
-                    self._context.locked = true;
-                    // const task = @as(OS_TASK.Task, head._data);
-                    // if (task.priority > task_control.runningPrio) {
-                    //     ARCH.runScheduler();
-                    // }
+                    if (head._data.priority < task_control.runningPrio) {
+                        ARCH.criticalEnd();
+                        ARCH.runScheduler();
+                        ARCH.criticalStart();
+                    }
                 }
             } else {
                 @breakpoint();

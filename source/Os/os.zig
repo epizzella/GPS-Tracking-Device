@@ -11,15 +11,15 @@ const DEFAULT_IDLE_TASK_SIZE = 17;
 const task_ctrl_tbl = &OS_TASK.task_control;
 
 ///Returns a new task.
-pub fn create_task(config: OS_TASK.TaskConfig) OS_TASK.TaskQueue.OsObject {
-    return OS_TASK.TaskQueue.OsObject{
+pub fn create_task(config: OS_TASK.TaskConfig) OS_TASK.TaskQueue.TaskHandle {
+    return OS_TASK.TaskQueue.TaskHandle{
         .name = config.name,
         ._data = Task._create_task(config),
     };
 }
 
 ///Adds a task to the operating system.
-pub fn addTaskToOs(task: *OS_TASK.TaskQueue.OsObject) void {
+pub fn addTaskToOs(task: *OS_TASK.TaskQueue.TaskHandle) void {
     task_ctrl_tbl.addActive(task);
 }
 

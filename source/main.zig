@@ -27,14 +27,20 @@ fn task2() void {
     }
 }
 
+fn task3() void {
+    while (true) {
+        blink(.{ .m_port = hal.GPIOA, .m_pin = hal.GPIO_PIN_9 });
+    }
+}
+
 var led_mutex = mutex.Mutex.create_mutex("led_mutex");
 fn blink(gpio: zgpio) void {
     led_mutex.acquire();
     const led = gpio;
     led.TogglePin();
-    os.delay(500);
-    led_mutex.release();
     os.delay(1);
+    led_mutex.release();
+    os.delay(500);
 }
 
 export fn main() void {
@@ -49,23 +55,32 @@ export fn main() void {
     const stackSize = 500;
     var stack1: [stackSize]u32 = [_]u32{0xDEADC0DE} ** stackSize;
     var stack2: [stackSize]u32 = [_]u32{0xDEADC0DE} ** stackSize;
+    var stack3: [stackSize]u32 = [_]u32{0xDEADC0DE} ** stackSize;
 
     var tcb1 = os.create_task(.{
         .name = "task1",
-        .priority = 2,
+        .priority = 1,
         .stack = &stack1,
         .subroutine = &task1,
     });
 
     var tcb2 = os.create_task(.{
         .name = "task2",
-        .priority = 3,
+        .priority = 2,
         .stack = &stack2,
         .subroutine = &task2,
     });
 
+    var tcb3 = os.create_task(.{
+        .name = "task3",
+        .priority = 3,
+        .stack = &stack3,
+        .subroutine = &task3,
+    });
+
     os.addTaskToOs(&tcb1);
     os.addTaskToOs(&tcb2);
+    os.addTaskToOs(&tcb3);
     os.coreInit();
     os.startOS(.{
         .idle_task_subroutine = &idleTask,

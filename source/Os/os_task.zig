@@ -1,10 +1,10 @@
-pub const TaskQueue = @import("util/linked_queue.zig").LinkedQueue(Task);
+pub const TaskQueue = @import("util/task_queue.zig");
 
 pub const Task = struct {
     stack: []u32,
     stack_ptr: u32,
     subroutine: *const fn () void,
-    blocked_time: u32,
+    blocked_time: u32 = 0,
     priority: u5,
     name: []const u8,
 
@@ -45,27 +45,27 @@ const TaskControl = struct {
     readyMask: u32 = 0, //      mask of ready tasks
     runningPrio: u6 = 0x00, //  priority level of the currently running task
 
-    export var current_task: ?*volatile TaskQueue.OsObject = null;
-    export var next_task: *volatile TaskQueue.OsObject = undefined;
+    export var current_task: ?*volatile TaskQueue.TaskHandle = null;
+    export var next_task: *volatile TaskQueue.TaskHandle = undefined;
 
     ///Add task to the active task queue
-    pub fn addActive(self: *TaskControl, task: *TaskQueue.OsObject) void {
-        self.table[task._data.priority].active_tasks.append(task);
+    pub fn addActive(self: *TaskControl, task: *TaskQueue.TaskHandle) void {
+        self.table[task._data.priority].active_tasks.insertAfter(task, null);
         self.readyMask |= ONE << (priorityAdjust[task._data.priority]);
     }
 
     ///Add task to the yielded task queue
-    pub fn addYeilded(self: *TaskControl, task: *TaskQueue.OsObject) void {
-        self.table[task._data.priority].yielded_task.append(task);
+    pub fn addYeilded(self: *TaskControl, task: *TaskQueue.TaskHandle) void {
+        self.table[task._data.priority].yielded_task.insertAfter(task, null);
     }
 
     ///Add task to the suspended task queue
-    pub fn addSuspended(self: TaskControl, task: *TaskQueue.OsObject) void {
-        self.table[task._data.priority].suspended_tasks.append(task);
+    pub fn addSuspended(self: TaskControl, task: *TaskQueue.TaskHandle) void {
+        self.table[task._data.priority].suspended_tasks.insertAfter(task, null);
     }
 
     ///Remove task from the active task queue
-    pub fn removeActive(self: *TaskControl, task: *TaskQueue.OsObject) void {
+    pub fn removeActive(self: *TaskControl, task: *TaskQueue.TaskHandle) void {
         _ = self.table[task._data.priority].active_tasks.remove(task);
         if (self.table[task._data.priority].active_tasks.head == null) {
             self.readyMask &= ~(ONE << (priorityAdjust[task._data.priority]));
@@ -73,17 +73,17 @@ const TaskControl = struct {
     }
 
     ///Remove task from the yielded task queue
-    pub fn removeYielded(self: *TaskControl, task: *TaskQueue.OsObject) void {
+    pub fn removeYielded(self: *TaskControl, task: *TaskQueue.TaskHandle) void {
         _ = self.table[task._data.priority].yielded_task.remove(task);
     }
 
     ///Remove task from the suspended task queue
-    pub fn removeSuspended(self: *TaskControl, task: *TaskQueue.OsObject) void {
+    pub fn removeSuspended(self: *TaskControl, task: *TaskQueue.TaskHandle) void {
         self.table[task._data.priority].suspended_tasks.remove(task);
     }
 
     ///Pop the active task from its active queue
-    pub fn popActive(self: *TaskControl) ?*TaskQueue.OsObject {
+    pub fn popActive(self: *TaskControl) ?*TaskQueue.TaskHandle {
         const head = self.table[self.runningPrio].active_tasks.pop();
         if (self.table[self.runningPrio].active_tasks.head == null) {
             self.readyMask &= ~(ONE << (priorityAdjust[self.runningPrio]));
@@ -138,8 +138,8 @@ const TaskControl = struct {
         }
     }
 
-    pub fn addIdleTask(self: *TaskControl, idle_task: *TaskQueue.OsObject) void {
-        self.table[IDLE_PRIORITY_LEVEL].active_tasks.append(idle_task);
+    pub fn addIdleTask(self: *TaskControl, idle_task: *TaskQueue.TaskHandle) void {
+        self.table[IDLE_PRIORITY_LEVEL].active_tasks.insertAfter(idle_task, null);
     }
 
     const priorityAdjust: [32]u5 = .{ 31, 30, 29, 28, 27, 26, 25, 24, 23, 22, 21, 20, 19, 18, 17, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0 };
