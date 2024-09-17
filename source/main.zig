@@ -2,8 +2,8 @@ const hal = @import("Zwrapper/hal_include.zig").stm32;
 const zuart = @import("Zwrapper/uart_wrapper.zig").Zuart;
 const zgpio = @import("Zwrapper/gpio_wrapper.zig").Zgpio;
 const zuitl = @import("Zwrapper/util_wrapper.zig").Zutil;
-const os = @import("Os/os.zig");
-const mutex = @import("Os/os_mutex.zig");
+const OS = @import("RTOS/os.zig");
+const mutex = OS.Mutex;
 
 const blink_time = 500;
 
@@ -38,9 +38,9 @@ fn blink(gpio: zgpio) void {
     led_mutex.acquire();
     const led = gpio;
     led.TogglePin();
-    os.delay(1);
+    OS.delay(1);
     led_mutex.release();
-    os.delay(500);
+    OS.delay(500);
 }
 
 const stackSize = 500;
@@ -48,21 +48,21 @@ var stack1: [stackSize]u32 = [_]u32{0xDEADC0DE} ** stackSize;
 var stack2: [stackSize]u32 = [_]u32{0xDEADC0DE} ** stackSize;
 var stack3: [stackSize]u32 = [_]u32{0xDEADC0DE} ** stackSize;
 
-var tcb1 = os.create_task(.{
+var tcb1 = OS.create_task(.{
     .name = "task1",
     .priority = 1,
     .stack = &stack1,
     .subroutine = &task1,
 });
 
-var tcb2 = os.create_task(.{
+var tcb2 = OS.create_task(.{
     .name = "task2",
     .priority = 2,
     .stack = &stack2,
     .subroutine = &task2,
 });
 
-var tcb3 = os.create_task(.{
+var tcb3 = OS.create_task(.{
     .name = "task3",
     .priority = 3,
     .stack = &stack3,
@@ -78,11 +78,11 @@ export fn main() void {
     _ = hal.MX_TIM3_Init();
     _ = hal.MX_TIM4_Init();
 
-    os.addTaskToOs(&tcb1);
-    os.addTaskToOs(&tcb2);
-    os.addTaskToOs(&tcb3);
-    os.coreInit();
-    os.startOS(.{
+    OS.addTaskToOs(&tcb1);
+    OS.addTaskToOs(&tcb2);
+    OS.addTaskToOs(&tcb3);
+    OS.coreInit();
+    OS.startOS(.{
         .idle_task_subroutine = &idleTask,
         .idle_stack_size = 25,
         .sysTick_callback = &incTick,
