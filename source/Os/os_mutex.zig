@@ -1,6 +1,8 @@
 const OS_TASK = @import("os_task.zig");
 const OS_CORE = @import("os_core.zig");
-const ARCH = @import("arch/arm-cortex-m/common/arch.zig");
+const arch_interface = @import("arch/arch_interface.zig");
+const builtin = @import("builtin");
+var ARCH = arch_interface.getArch(builtin.cpu.model);
 
 const TaskQueue = @import("util/task_queue.zig");
 const Task = TaskQueue.TaskHandle;

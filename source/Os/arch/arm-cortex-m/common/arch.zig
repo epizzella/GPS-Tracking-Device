@@ -5,6 +5,61 @@ const task_ctrl_tbl = &OS_TASK.task_control;
 const os_config = &OS_CORE._getOsConfig;
 const os_started = &OS_CORE._isOsStarted;
 
+const Self = @This();
+
+/////////////////////////////////////////////////////////
+//    Architecture specific Function Implemntations   //
+///////////////////////////////////////////////////////
+fn schedule() void {
+    var self = Self{};
+    task_ctrl_tbl.readyNextTask();
+    if (task_ctrl_tbl.validSwitch()) {
+        self.runContextSwitch();
+    }
+}
+
+pub fn coreInit(self: *Self) void {
+    _ = self;
+    SHPR3.PRI_PENDSV = LOWEST_PRIO_MSK; //Set the pendsv to the lowest priority to avoid context switch during ISR
+    SHPR3.PRI_SYSTICK = ~LOWEST_PRIO_MSK; //Set sysTick to the highest priority.
+}
+
+pub fn interruptActive(self: *Self) bool {
+    _ = self;
+    return ICSR.VECTACTIVE > 0;
+}
+
+///Enable Interrupts
+pub inline fn criticalEnd(self: *Self) void {
+    _ = self;
+    asm volatile ("CPSIE    I");
+}
+
+//Disable Interrupts
+pub inline fn criticalStart(self: *Self) void {
+    _ = self;
+    asm volatile ("CPSID    I");
+}
+
+pub inline fn runScheduler(self: *Self) void {
+    _ = self;
+    asm volatile ("SVC      #0");
+}
+
+pub inline fn runContextSwitch(self: *Self) void {
+    _ = self;
+    ICSR.PENDSVSET = true;
+}
+
+pub inline fn isDebugAttached(self: *Self) bool {
+    _ = self;
+    return DHCSR.C_DEBUGEN;
+}
+
+/////////////////////////////////////////////
+//         Exception Handlers             //
+///////////////////////////////////////////
+
 export fn SysTick_Handler() void {
     if (os_config().sysTick_callback) |callback| {
         callback();
@@ -18,47 +73,10 @@ export fn SysTick_Handler() void {
 }
 
 export fn SVC_Handler() void {
-    criticalStart();
+    var self = Self{};
+    self.criticalStart();
     schedule();
-    criticalEnd();
-}
-
-fn schedule() void {
-    task_ctrl_tbl.readyNextTask();
-    if (task_ctrl_tbl.validSwitch()) {
-        runContextSwitch();
-    }
-}
-
-pub fn coreInit() void {
-    SHPR3.PRI_PENDSV = LOWEST_PRIO_MSK; //Set the pendsv to the lowest priority to avoid context switch during ISR
-    SHPR3.PRI_SYSTICK = ~LOWEST_PRIO_MSK; //Set sysTick to the highest priority.
-}
-
-pub fn interruptActive() bool {
-    return ICSR.VECTACTIVE > 0;
-}
-
-///Enable Interrupts
-pub inline fn criticalEnd() void {
-    asm volatile ("CPSIE    I");
-}
-
-//Disable Interrupts
-pub inline fn criticalStart() void {
-    asm volatile ("CPSID    I");
-}
-
-pub inline fn runScheduler() void {
-    asm volatile ("SVC      #0");
-}
-
-pub inline fn runContextSwitch() void {
-    ICSR.PENDSVSET = true;
-}
-
-pub inline fn isDebugAttached() bool {
-    return DHCSR.C_DEBUGEN;
+    self.criticalEnd();
 }
 
 /////////////////////////////////////////////

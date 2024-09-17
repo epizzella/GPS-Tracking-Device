@@ -1,10 +1,14 @@
 const OS_TASK = @import("os_task.zig");
 const OS_CORE = @import("os_core.zig");
-const ARCH = @import("arch/arm-cortex-m/common/arch.zig");
+const builtin = @import("builtin");
+const arch_interface = @import("arch/arch_interface.zig");
+var ARCH = arch_interface.getArch(builtin.cpu.model);
 
 pub const Task = OS_TASK.Task;
 pub const OsConfig = OS_CORE.OsConfig;
-pub const coreInit = ARCH.coreInit;
+pub fn coreInit() void {
+    ARCH.coreInit();
+}
 
 const DEFAULT_IDLE_TASK_SIZE = 17;
 
