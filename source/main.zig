@@ -3,7 +3,7 @@ const zuart = @import("Zwrapper/uart_wrapper.zig").Zuart;
 const zgpio = @import("Zwrapper/gpio_wrapper.zig").Zgpio;
 const zuitl = @import("Zwrapper/util_wrapper.zig").Zutil;
 const os = @import("Os/os.zig");
-const mutex = @import("./Os/os_mutex.zig");
+const mutex = @import("Os/os_mutex.zig");
 
 const blink_time = 500;
 
@@ -43,6 +43,32 @@ fn blink(gpio: zgpio) void {
     os.delay(500);
 }
 
+const stackSize = 500;
+var stack1: [stackSize]u32 = [_]u32{0xDEADC0DE} ** stackSize;
+var stack2: [stackSize]u32 = [_]u32{0xDEADC0DE} ** stackSize;
+var stack3: [stackSize]u32 = [_]u32{0xDEADC0DE} ** stackSize;
+
+var tcb1 = os.create_task(.{
+    .name = "task1",
+    .priority = 1,
+    .stack = &stack1,
+    .subroutine = &task1,
+});
+
+var tcb2 = os.create_task(.{
+    .name = "task2",
+    .priority = 2,
+    .stack = &stack2,
+    .subroutine = &task2,
+});
+
+var tcb3 = os.create_task(.{
+    .name = "task3",
+    .priority = 3,
+    .stack = &stack3,
+    .subroutine = &task3,
+});
+
 export fn main() void {
     _ = hal.HAL_Init();
     _ = hal.SystemClock_Config();
@@ -51,32 +77,6 @@ export fn main() void {
     _ = hal.MX_USART3_UART_Init();
     _ = hal.MX_TIM3_Init();
     _ = hal.MX_TIM4_Init();
-
-    const stackSize = 500;
-    var stack1: [stackSize]u32 = [_]u32{0xDEADC0DE} ** stackSize;
-    var stack2: [stackSize]u32 = [_]u32{0xDEADC0DE} ** stackSize;
-    var stack3: [stackSize]u32 = [_]u32{0xDEADC0DE} ** stackSize;
-
-    var tcb1 = os.create_task(.{
-        .name = "task1",
-        .priority = 1,
-        .stack = &stack1,
-        .subroutine = &task1,
-    });
-
-    var tcb2 = os.create_task(.{
-        .name = "task2",
-        .priority = 2,
-        .stack = &stack2,
-        .subroutine = &task2,
-    });
-
-    var tcb3 = os.create_task(.{
-        .name = "task3",
-        .priority = 3,
-        .stack = &stack3,
-        .subroutine = &task3,
-    });
 
     os.addTaskToOs(&tcb1);
     os.addTaskToOs(&tcb2);

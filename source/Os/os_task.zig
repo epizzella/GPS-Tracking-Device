@@ -1,4 +1,6 @@
-pub const TaskQueue = @import("util/task_queue.zig");
+const TaskQueue = @import("util/task_queue.zig");
+const OsCore = @import("os_core.zig");
+const TaskHandle = TaskQueue.TaskHandle;
 
 pub const Task = struct {
     stack: []u32,
@@ -15,11 +17,8 @@ pub const Task = struct {
             .priority = config.priority,
             .subroutine = config.subroutine,
             .blocked_time = 0,
-            .stack_ptr = @intFromPtr(&config.stack[config.stack.len - 16]),
+            .stack_ptr = 0,
         };
-
-        task.stack.ptr[task.stack.len - 1] = 0x1 << 24; // xPSR
-        task.stack.ptr[task.stack.len - 2] = @intFromPtr(task.subroutine); //PC
 
         return task;
     }
@@ -47,6 +46,34 @@ const TaskControl = struct {
 
     export var current_task: ?*volatile TaskQueue.TaskHandle = null;
     export var next_task: *volatile TaskQueue.TaskHandle = undefined;
+
+    pub fn initAllStacks(self: *TaskControl) void {
+        if (!OsCore._isOsStarted()) {
+            for (&self.table) |*row| {
+                var active_task = row.active_tasks.head;
+                var suspend_task = row.suspended_tasks.head;
+                while (true) {
+                    if (active_task) |a| {
+                        initTaskStack(a);
+                        active_task = a._to_tail;
+                    }
+
+                    if (suspend_task) |s| {
+                        initTaskStack(s);
+                        suspend_task = s._to_tail;
+                    }
+
+                    if (active_task == null and suspend_task == null) break;
+                }
+            }
+        }
+    }
+
+    fn initTaskStack(task: *TaskHandle) void {
+        task._data.stack_ptr = @intFromPtr(&task._data.stack.ptr[task._data.stack.len - 16]);
+        task._data.stack.ptr[task._data.stack.len - 1] = 0x1 << 24; // xPSR
+        task._data.stack.ptr[task._data.stack.len - 2] = @intFromPtr(task._data.subroutine); // PC
+    }
 
     ///Add task to the active task queue
     pub fn addActive(self: *TaskControl, task: *TaskQueue.TaskHandle) void {

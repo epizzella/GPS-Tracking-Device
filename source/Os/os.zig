@@ -1,43 +1,44 @@
-const OS_TASK = @import("os_task.zig");
-const OS_CORE = @import("os_core.zig");
+const OsTask = @import("os_task.zig");
+const OsCore = @import("os_core.zig");
+const TaskQueue = @import("util/task_queue.zig");
 const builtin = @import("builtin");
-const arch_interface = @import("arch/arch_interface.zig");
-var ARCH = arch_interface.getArch(builtin.cpu.model);
+const ArchInterface = @import("arch/arch_interface.zig");
+var arch = ArchInterface.getArch(builtin.cpu.model);
 
-pub const Task = OS_TASK.Task;
-pub const OsConfig = OS_CORE.OsConfig;
+pub const Task = OsTask.Task;
+pub const OsConfig = OsCore.OsConfig;
 pub fn coreInit() void {
-    ARCH.coreInit();
+    arch.coreInit();
 }
 
 const DEFAULT_IDLE_TASK_SIZE = 17;
 
-const task_ctrl_tbl = &OS_TASK.task_control;
+const task_ctrl = &OsTask.task_control;
 
 ///Returns a new task.
-pub fn create_task(config: OS_TASK.TaskConfig) OS_TASK.TaskQueue.TaskHandle {
-    return OS_TASK.TaskQueue.TaskHandle{
+pub fn create_task(config: OsTask.TaskConfig) TaskQueue.TaskHandle {
+    return TaskQueue.TaskHandle{
         .name = config.name,
         ._data = Task._create_task(config),
     };
 }
 
 ///Adds a task to the operating system.
-pub fn addTaskToOs(task: *OS_TASK.TaskQueue.TaskHandle) void {
-    task_ctrl_tbl.addActive(task);
+pub fn addTaskToOs(task: *TaskQueue.TaskHandle) void {
+    task_ctrl.addActive(task);
 }
 
 export var g_stack_offset: u32 = 0x08;
 ///The operating system will begin multitasking.  This function never returns.
 pub fn startOS(comptime config: OsConfig) void {
-    if (OS_CORE._isOsStarted() == false) {
+    if (OsCore._isOsStarted() == false) {
         comptime {
             if (config.idle_stack_size < DEFAULT_IDLE_TASK_SIZE) {
                 @compileError("Idle stack size cannont be less than the default size.");
             }
         }
 
-        OS_CORE._setOsConfig(config);
+        OsCore._setOsConfig(config);
 
         var idle_stack: [config.idle_stack_size]u32 = [_]u32{0xDEADC0DE} ** config.idle_stack_size;
 
@@ -48,15 +49,16 @@ pub fn startOS(comptime config: OsConfig) void {
             .subroutine = config.idle_task_subroutine,
         });
 
-        task_ctrl_tbl.addIdleTask(&idle_task);
+        task_ctrl.addIdleTask(&idle_task);
+        task_ctrl.initAllStacks();
 
         //Find offset to stack ptr as zig does not guarantee struct field order
         g_stack_offset = @abs(@intFromPtr(&idle_task._data.stack_ptr) -% @intFromPtr(&idle_task));
 
-        OS_CORE._setOsStarted();
-        ARCH.runScheduler(); //begin os
+        OsCore._setOsStarted();
+        arch.runScheduler(); //begin os
 
-        if (ARCH.isDebugAttached()) {
+        if (arch.isDebugAttached()) {
             @breakpoint();
         }
 
@@ -66,11 +68,11 @@ pub fn startOS(comptime config: OsConfig) void {
 
 ///Put the active task to sleep.  It will become ready to run again `time_ms` milliseconds later
 pub fn delay(time_ms: u32) void {
-    if (task_ctrl_tbl.table[task_ctrl_tbl.runningPrio].active_tasks.head) |c_task| {
+    if (task_ctrl.table[task_ctrl.runningPrio].active_tasks.head) |c_task| {
         //TODO: check if c_task is idle task and throw an error if so
         c_task._data.blocked_time = time_ms;
-        task_ctrl_tbl.removeActive(@volatileCast(c_task));
-        task_ctrl_tbl.addYeilded(@volatileCast(c_task));
-        ARCH.runScheduler();
+        task_ctrl.removeActive(@volatileCast(c_task));
+        task_ctrl.addYeilded(@volatileCast(c_task));
+        arch.runScheduler();
     }
 }
