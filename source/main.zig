@@ -17,29 +17,29 @@ fn idleTask() !void {
 
 fn task1() !void {
     while (true) {
-        blink(.{ .m_port = hal.GPIOA, .m_pin = hal.GPIO_PIN_6 });
+        try blink(.{ .m_port = hal.GPIOA, .m_pin = hal.GPIO_PIN_6 });
     }
 }
 
 fn task2() !void {
     while (true) {
-        blink(.{ .m_port = hal.GPIOA, .m_pin = hal.GPIO_PIN_8 });
+        try blink(.{ .m_port = hal.GPIOA, .m_pin = hal.GPIO_PIN_8 });
     }
 }
 
 fn task3() !void {
     while (true) {
-        blink(.{ .m_port = hal.GPIOA, .m_pin = hal.GPIO_PIN_9 });
+        try blink(.{ .m_port = hal.GPIOA, .m_pin = hal.GPIO_PIN_9 });
     }
 }
 
 var led_mutex = mutex.Mutex.create_mutex("led_mutex");
-fn blink(gpio: zgpio) void {
-    led_mutex.acquire();
+fn blink(gpio: zgpio) !void {
+    try led_mutex.acquire();
     const led = gpio;
     led.TogglePin();
     Os.delay(1);
-    led_mutex.release();
+    try led_mutex.release();
     Os.delay(500);
 }
 
