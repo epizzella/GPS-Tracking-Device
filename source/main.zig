@@ -7,7 +7,7 @@ const mutex = Os.Mutex;
 
 const blink_time = 500;
 
-fn idleTask() void {
+fn idleTask() !void {
     const led = zgpio{ .m_port = hal.GPIOC, .m_pin = hal.GPIO_PIN_13 };
     while (true) {
         led.TogglePin();
@@ -15,19 +15,19 @@ fn idleTask() void {
     }
 }
 
-fn task1() void {
+fn task1() !void {
     while (true) {
         blink(.{ .m_port = hal.GPIOA, .m_pin = hal.GPIO_PIN_6 });
     }
 }
 
-fn task2() void {
+fn task2() !void {
     while (true) {
         blink(.{ .m_port = hal.GPIOA, .m_pin = hal.GPIO_PIN_8 });
     }
 }
 
-fn task3() void {
+fn task3() !void {
     while (true) {
         blink(.{ .m_port = hal.GPIOA, .m_pin = hal.GPIO_PIN_9 });
     }
@@ -98,15 +98,9 @@ const std = @import("std");
 const builtin = @import("builtin");
 pub fn panic(msg: []const u8, _: ?*std.builtin.StackTrace, _: ?usize) noreturn {
     var pcCom = zuart{ .m_uart_handle = &hal.huart2 };
-    pcCom.writeBlocking("--Panic--\n", 500) catch blk: {
-        break :blk;
-    };
-    pcCom.writeBlocking(msg, 500) catch blk: {
-        break :blk;
-    };
-    pcCom.writeBlocking("\n", 500) catch blk: {
-        break :blk;
-    };
+    pcCom.writeBlocking("--Panic--\n", 500) catch {};
+    pcCom.writeBlocking(msg, 500) catch {};
+    pcCom.writeBlocking("\n", 500) catch {};
 
     while (true) {
         @breakpoint();
