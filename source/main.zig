@@ -3,7 +3,7 @@ const zuart = @import("Zwrapper/uart_wrapper.zig").Zuart;
 const zgpio = @import("Zwrapper/gpio_wrapper.zig").Zgpio;
 const zuitl = @import("Zwrapper/util_wrapper.zig").Zutil;
 const Os = @import("RTOS/os.zig");
-const mutex = Os.Mutex;
+const Mutex = Os.Mutex;
 
 const blink_time = 500;
 
@@ -33,14 +33,15 @@ fn task3() !void {
     }
 }
 
-var led_mutex = mutex.Mutex.create_mutex("led_mutex");
+var led_mutex = Mutex.create_mutex("led_mutex");
+
 fn blink(gpio: zgpio) !void {
-    try led_mutex.acquire();
+    try led_mutex.acquire(.{});
     const led = gpio;
     led.TogglePin();
-    Os.delay(1);
+    try Os.delay(1);
     try led_mutex.release();
-    Os.delay(500);
+    try Os.delay(500);
 }
 
 const stackSize = 500;
@@ -81,12 +82,15 @@ export fn main() void {
     Os.addTaskToOs(&tcb1);
     Os.addTaskToOs(&tcb2);
     Os.addTaskToOs(&tcb3);
-    Os.coreInit();
+
+    Os.init();
     Os.startOS(.{
         .idle_task_subroutine = &idleTask,
         .idle_stack_size = 25,
         .sysTick_callback = &incTick,
     });
+
+    unreachable;
 }
 
 extern var uwTick: c_uint;
@@ -98,11 +102,11 @@ const std = @import("std");
 const builtin = @import("builtin");
 pub fn panic(msg: []const u8, _: ?*std.builtin.StackTrace, _: ?usize) noreturn {
     var pcCom = zuart{ .m_uart_handle = &hal.huart2 };
-    pcCom.writeBlocking("--Panic--\n", 500) catch {};
-    pcCom.writeBlocking(msg, 500) catch {};
-    pcCom.writeBlocking("\n", 500) catch {};
+    pcCom.writeBlocking("--Panic--\n", 50) catch {};
+    pcCom.writeBlocking(msg, 250) catch {};
+    pcCom.writeBlocking("\n", 50) catch {};
 
     while (true) {
-        @breakpoint();
+        //@breakpoint();
     }
 }
