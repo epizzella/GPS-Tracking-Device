@@ -4,6 +4,7 @@ const zgpio = @import("Zwrapper/gpio_wrapper.zig").Zgpio;
 const zuitl = @import("Zwrapper/util_wrapper.zig").Zutil;
 const Os = @import("RTOS/os.zig");
 const Mutex = Os.Mutex;
+const OsError = Os.OsError;
 
 const blink_time = 500;
 
