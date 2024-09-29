@@ -43,9 +43,9 @@ pub fn build(b: *std.Build) void {
     elf.defineCMacro("USE_HAL_DRIVER", "");
     elf.defineCMacro("STM32F103xB", "");
 
-    elf.addAssemblyFile(.{ .path = "startup_stm32f103xb.S" });
-    elf.addAssemblyFile(.{ .path = "RTOS/source/arch/arm-cortex-m/armv7-m/arch.S" });
-    elf.setLinkerScript(.{ .path = "STM32F103C8Tx_FLASH.ld" });
+    elf.addAssemblyFile(.{ .src_path = .{ .owner = b, .sub_path = "startup_stm32f103xb.S" } });
+    elf.addAssemblyFile(.{ .src_path = .{ .owner = b, .sub_path = "RTOS/source/arch/arm-cortex-m/armv7-m/arch.S" } });
+    elf.setLinkerScript(.{ .src_path = .{ .owner = b, .sub_path = "STM32F103C8Tx_FLASH.ld" } });
     //elf.setVerboseLink(true);
     //b.verbose_link = true;
 
@@ -103,18 +103,19 @@ pub fn build(b: *std.Build) void {
     const arm_gcc_path = "/home/fixer/arm-gcc";
     const arm_gcc_version = "13.3.1";
     // Manually including libraries bundled with arm-none-eabi-gcc
-    elf.addLibraryPath(.{ .path = b.fmt("{s}/arm-none-eabi/lib/thumb/v7/nofp", .{arm_gcc_path}) });
-    elf.addLibraryPath(.{ .path = b.fmt("{s}/lib/gcc/arm-none-eabi/{s}/thumb/v7/nofp", .{ arm_gcc_path, arm_gcc_version }) });
-    elf.addSystemIncludePath(.{ .path = b.fmt("{s}/arm-none-eabi/include", .{arm_gcc_path}) });
+    elf.addLibraryPath(.{ .src_path = .{ .owner = b, .sub_path = b.fmt("{s}/arm-none-eabi/lib/thumb/v7/nofp", .{arm_gcc_path}) } });
+    elf.addLibraryPath(.{ .src_path = .{ .owner = b, .sub_path = b.fmt("{s}/lib/gcc/arm-none-eabi/{s}/thumb/v7/nofp", .{ arm_gcc_path, arm_gcc_version }) } });
+    elf.addSystemIncludePath(.{ .src_path = .{ .owner = b, .sub_path = b.fmt("{s}/arm-none-eabi/include", .{arm_gcc_path}) } });
+
     elf.linkSystemLibrary("c_nano");
     // elf.linkSystemLibrary("m");
 
     // Manually include C runtime objects bundled with arm-none-eabi-gcc
-    elf.addObjectFile(.{ .path = b.fmt("{s}/arm-none-eabi/lib/thumb/v7/nofp/crt0.o", .{arm_gcc_path}) });
-    elf.addObjectFile(.{ .path = b.fmt("{s}/lib/gcc/arm-none-eabi/{s}/thumb/v7/nofp/crti.o", .{ arm_gcc_path, arm_gcc_version }) });
-    elf.addObjectFile(.{ .path = b.fmt("{s}/lib/gcc/arm-none-eabi/{s}/thumb/v7/nofp/crtbegin.o", .{ arm_gcc_path, arm_gcc_version }) });
-    elf.addObjectFile(.{ .path = b.fmt("{s}/lib/gcc/arm-none-eabi/{s}/thumb/v7/nofp/crtend.o", .{ arm_gcc_path, arm_gcc_version }) });
-    elf.addObjectFile(.{ .path = b.fmt("{s}/lib/gcc/arm-none-eabi/{s}/thumb/v7/nofp/crtn.o", .{ arm_gcc_path, arm_gcc_version }) });
+    elf.addObjectFile(.{ .src_path = .{ .owner = b, .sub_path = b.fmt("{s}/arm-none-eabi/lib/thumb/v7/nofp/crt0.o", .{arm_gcc_path}) } });
+    elf.addObjectFile(.{ .src_path = .{ .owner = b, .sub_path = b.fmt("{s}/lib/gcc/arm-none-eabi/{s}/thumb/v7/nofp/crti.o", .{ arm_gcc_path, arm_gcc_version }) } });
+    elf.addObjectFile(.{ .src_path = .{ .owner = b, .sub_path = b.fmt("{s}/lib/gcc/arm-none-eabi/{s}/thumb/v7/nofp/crtbegin.o", .{ arm_gcc_path, arm_gcc_version }) } });
+    elf.addObjectFile(.{ .src_path = .{ .owner = b, .sub_path = b.fmt("{s}/lib/gcc/arm-none-eabi/{s}/thumb/v7/nofp/crtend.o", .{ arm_gcc_path, arm_gcc_version }) } });
+    elf.addObjectFile(.{ .src_path = .{ .owner = b, .sub_path = b.fmt("{s}/lib/gcc/arm-none-eabi/{s}/thumb/v7/nofp/crtn.o", .{ arm_gcc_path, arm_gcc_version }) } });
 
     elf.want_lto = true; //silence ld.lld tripples warning... doesn't work
     elf.link_gc_sections = true; //equivalent to -Wl,--gc-sections
@@ -127,7 +128,7 @@ pub fn build(b: *std.Build) void {
 
     //Add c inc paths
     for (stm32f1_hal_inc) |header| {
-        elf.addIncludePath(.{ .path = header });
+        elf.addIncludePath(.{ .src_path = .{ .owner = b, .sub_path = header } });
     }
 
     //Without setting the entry point a linker warning stating that _start or _exit is missing.
