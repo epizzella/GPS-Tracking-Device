@@ -80,9 +80,9 @@ export fn main() void {
     _ = hal.MX_TIM3_Init();
     _ = hal.MX_TIM4_Init();
 
-    Os.addTaskToOs(&tcb1);
-    Os.addTaskToOs(&tcb2);
-    Os.addTaskToOs(&tcb3);
+    tcb1.initalize();
+    tcb2.initalize();
+    tcb3.initalize();
 
     Os.init();
     Os.startOS(.{

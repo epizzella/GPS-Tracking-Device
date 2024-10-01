@@ -5,7 +5,7 @@ pub fn build(b: *std.Build) void {
     const prj_name = "gps";
 
     comptime {
-        const required_zig = "0.12.0";
+        const required_zig = "0.13.0";
         const current_zig = builtin.zig_version;
         const min_zig = std.SemanticVersion.parse(required_zig) catch unreachable;
         if (current_zig.order(min_zig) == .lt) {
