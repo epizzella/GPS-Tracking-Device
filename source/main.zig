@@ -4,33 +4,53 @@ const zgpio = @import("Zwrapper/gpio_wrapper.zig").Zgpio;
 const zuitl = @import("Zwrapper/util_wrapper.zig").Zutil;
 const Os = @import("RTOS/os.zig");
 const Mutex = Os.Mutex;
+const EventGroup = Os.EventGroup;
 const OsError = Os.OsError;
+const EventOperation = Os.EventOperation;
 
 const blink_time = 500;
 
 fn idleTask() !void {
-    const led = zgpio{ .m_port = hal.GPIOC, .m_pin = hal.GPIO_PIN_13 };
+    var led = zgpio{ .m_port = hal.GPIOC, .m_pin = hal.GPIO_PIN_13 };
     while (true) {
         led.TogglePin();
         zuitl.delay(1000);
     }
 }
 
+var eventGroup = EventGroup.createEventGroup(.{ .name = "myEvent" });
+const event1: usize = 0b1;
+const event2: usize = 0b10;
+
 fn task1() !void {
+    try Os.delay(200);
     while (true) {
-        try blink(.{ .m_port = hal.GPIOA, .m_pin = hal.GPIO_PIN_6 });
+        try eventGroup.writeEvents(.{ .event = event1 });
+        try Os.delay(500);
+        try eventGroup.writeEvents(.{ .event = event2 });
+        try Os.delay(500);
     }
 }
 
 fn task2() !void {
+    var myLed: zgpio = .{ .m_port = hal.GPIOA, .m_pin = hal.GPIO_PIN_8 };
     while (true) {
-        try blink(.{ .m_port = hal.GPIOA, .m_pin = hal.GPIO_PIN_8 });
+        const my_event = try eventGroup.pendEvent(.{ .event_mask = event1, .PendOn = EventOperation.set });
+        if (my_event == event1) {
+            myLed.TogglePin();
+            try eventGroup.writeEvents(.{ .event = 0 });
+        }
     }
 }
 
 fn task3() !void {
+    var myLed: zgpio = .{ .m_port = hal.GPIOA, .m_pin = hal.GPIO_PIN_9 };
     while (true) {
-        try blink(.{ .m_port = hal.GPIOA, .m_pin = hal.GPIO_PIN_9 });
+        const my_event = try eventGroup.pendEvent(.{ .event_mask = event2, .PendOn = EventOperation.set });
+        if (my_event == event2) {
+            myLed.TogglePin();
+            try eventGroup.writeEvents(.{ .event = 0 });
+        }
     }
 }
 
@@ -83,6 +103,8 @@ export fn main() void {
     tcb1.initalize();
     tcb2.initalize();
     tcb3.initalize();
+
+    eventGroup.initalize();
 
     Os.init();
     Os.startOS(.{
