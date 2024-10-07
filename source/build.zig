@@ -44,7 +44,7 @@ pub fn build(b: *std.Build) void {
     elf.defineCMacro("STM32F103xB", "");
 
     elf.addAssemblyFile(.{ .src_path = .{ .owner = b, .sub_path = "startup_stm32f103xb.S" } });
-    elf.addAssemblyFile(.{ .src_path = .{ .owner = b, .sub_path = "RTOS/source/arch/arm-cortex-m/armv7-m/arch.S" } });
+    //elf.addAssemblyFile(.{ .src_path = .{ .owner = b, .sub_path = "RTOS/source/arch/arm-cortex-m/armv7-m/arch.S" } });
     elf.setLinkerScript(.{ .src_path = .{ .owner = b, .sub_path = "STM32F103C8Tx_FLASH.ld" } });
     //elf.setVerboseLink(true);
     //b.verbose_link = true;

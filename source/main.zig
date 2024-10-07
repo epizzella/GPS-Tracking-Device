@@ -35,7 +35,7 @@ fn task1() !void {
 fn task2() !void {
     var myLed: zgpio = .{ .m_port = hal.GPIOA, .m_pin = hal.GPIO_PIN_8 };
     while (true) {
-        const my_event = try eventGroup.pendEvent(.{ .event_mask = event1, .PendOn = EventOperation.set });
+        const my_event = try eventGroup.pendEvent(.{ .event_mask = event1, .PendOn = EventOperation.set_all });
         if (my_event == event1) {
             myLed.TogglePin();
             try eventGroup.writeEvents(.{ .event = 0 });
@@ -46,7 +46,7 @@ fn task2() !void {
 fn task3() !void {
     var myLed: zgpio = .{ .m_port = hal.GPIOA, .m_pin = hal.GPIO_PIN_9 };
     while (true) {
-        const my_event = try eventGroup.pendEvent(.{ .event_mask = event2, .PendOn = EventOperation.set });
+        const my_event = try eventGroup.pendEvent(.{ .event_mask = event2, .PendOn = EventOperation.set_all });
         if (my_event == event2) {
             myLed.TogglePin();
             try eventGroup.writeEvents(.{ .event = 0 });
