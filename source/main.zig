@@ -25,9 +25,9 @@ const event2: usize = 0b10;
 fn task1() !void {
     try Os.delay(200);
     while (true) {
-        try eventGroup.writeEvents(.{ .event = event1 });
+        try eventGroup.writeEvent(.{ .event = event1 });
         try Os.delay(500);
-        try eventGroup.writeEvents(.{ .event = event2 });
+        try eventGroup.writeEvent(.{ .event = event2 });
         try Os.delay(500);
     }
 }
@@ -38,7 +38,7 @@ fn task2() !void {
         const my_event = try eventGroup.pendEvent(.{ .event_mask = event1, .PendOn = EventOperation.set_all });
         if (my_event == event1) {
             myLed.TogglePin();
-            try eventGroup.writeEvents(.{ .event = 0 });
+            try eventGroup.writeEvent(.{ .event = 0 });
         }
     }
 }
@@ -49,7 +49,7 @@ fn task3() !void {
         const my_event = try eventGroup.pendEvent(.{ .event_mask = event2, .PendOn = EventOperation.set_all });
         if (my_event == event2) {
             myLed.TogglePin();
-            try eventGroup.writeEvents(.{ .event = 0 });
+            try eventGroup.writeEvent(.{ .event = 0 });
         }
     }
 }
