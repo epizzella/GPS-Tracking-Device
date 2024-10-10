@@ -6,7 +6,7 @@ const Os = @import("RTOS/os.zig");
 const Mutex = Os.Mutex;
 const EventGroup = Os.EventGroup;
 const OsError = Os.OsError;
-const EventOperation = Os.EventOperation;
+const Sem = Os.Semaphore;
 
 const blink_time = 500;
 
@@ -18,39 +18,38 @@ fn idleTask() !void {
     }
 }
 
-var eventGroup = EventGroup.createEventGroup(.{ .name = "myEvent" });
-const event1: usize = 0b1;
-const event2: usize = 0b10;
+var sem = Sem.create_semaphore(.{ .name = "Semaphore", .inital_value = 2 });
 
 fn task1() !void {
-    try Os.delay(200);
+    var myLed: zgpio = .{ .m_port = hal.GPIOA, .m_pin = hal.GPIO_PIN_6 };
     while (true) {
-        try eventGroup.writeEvent(.{ .event = event1 });
-        try Os.delay(500);
-        try eventGroup.writeEvent(.{ .event = event2 });
-        try Os.delay(500);
+        try sem.acquire(.{});
+        myLed.TogglePin();
+        try Os.delay(blink_time);
+        try sem.release();
+        try Os.delay(1);
     }
 }
 
 fn task2() !void {
     var myLed: zgpio = .{ .m_port = hal.GPIOA, .m_pin = hal.GPIO_PIN_8 };
     while (true) {
-        const my_event = try eventGroup.pendEvent(.{ .event_mask = event1, .PendOn = EventOperation.set_all });
-        if (my_event == event1) {
-            myLed.TogglePin();
-            try eventGroup.writeEvent(.{ .event = 0 });
-        }
+        try sem.acquire(.{});
+        myLed.TogglePin();
+        try Os.delay(blink_time);
+        try sem.release();
+        try Os.delay(1);
     }
 }
 
 fn task3() !void {
     var myLed: zgpio = .{ .m_port = hal.GPIOA, .m_pin = hal.GPIO_PIN_9 };
     while (true) {
-        const my_event = try eventGroup.pendEvent(.{ .event_mask = event2, .PendOn = EventOperation.set_all });
-        if (my_event == event2) {
-            myLed.TogglePin();
-            try eventGroup.writeEvent(.{ .event = 0 });
-        }
+        try sem.acquire(.{});
+        myLed.TogglePin();
+        try Os.delay(blink_time);
+        try sem.release();
+        try Os.delay(1);
     }
 }
 
@@ -104,7 +103,7 @@ export fn main() void {
     tcb2.initalize();
     tcb3.initalize();
 
-    eventGroup.initalize();
+    sem.init();
 
     Os.init();
     Os.startOS(.{
