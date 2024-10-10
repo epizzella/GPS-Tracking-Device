@@ -25,9 +25,9 @@ fn task1() !void {
     while (true) {
         try sem.acquire(.{});
         myLed.TogglePin();
-        try Os.delay(blink_time);
+        try Os.Time.delay(blink_time);
         try sem.release();
-        try Os.delay(1);
+        try Os.Time.delay(1);
     }
 }
 
@@ -36,9 +36,9 @@ fn task2() !void {
     while (true) {
         try sem.acquire(.{});
         myLed.TogglePin();
-        try Os.delay(blink_time);
+        try Os.Time.delay(blink_time);
         try sem.release();
-        try Os.delay(1);
+        try Os.Time.delay(1);
     }
 }
 
@@ -47,9 +47,9 @@ fn task3() !void {
     while (true) {
         try sem.acquire(.{});
         myLed.TogglePin();
-        try Os.delay(blink_time);
+        try Os.Time.delay(blink_time);
         try sem.release();
-        try Os.delay(1);
+        try Os.Time.delay(1);
     }
 }
 
