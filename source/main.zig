@@ -99,9 +99,9 @@ export fn main() void {
     _ = hal.MX_TIM3_Init();
     _ = hal.MX_TIM4_Init();
 
-    tcb1.initalize();
-    tcb2.initalize();
-    tcb3.initalize();
+    tcb1.init();
+    tcb2.init();
+    tcb3.init();
 
     sem.init();
 
