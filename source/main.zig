@@ -18,7 +18,7 @@ const TestType = enum {
     msg_q,
 };
 
-const test_type = TestType.msg_q;
+const test_type = TestType.mutex;
 
 var led_mutex = Mutex.create_mutex("led_mutex");
 var sem = Sem.create_semaphore(.{ .name = "led_semaphore", .inital_value = 2 });
@@ -31,7 +31,7 @@ fn idleTask() !void {
     var led = zgpio{ .m_port = hal.GPIOC, .m_pin = hal.GPIO_PIN_13 };
     while (true) {
         led.TogglePin();
-        zuitl.delay(1000);
+        zuitl.delay(100);
     }
 }
 
@@ -174,6 +174,7 @@ export fn main() void {
     sem.init();
     event_group.init();
     msg_queue.init();
+    led_mutex.init();
 
     Os.init();
     Os.startOS(.{
