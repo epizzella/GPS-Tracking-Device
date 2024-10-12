@@ -2,72 +2,161 @@ const hal = @import("Zwrapper/hal_include.zig").stm32;
 const zuart = @import("Zwrapper/uart_wrapper.zig").Zuart;
 const zgpio = @import("Zwrapper/gpio_wrapper.zig").Zgpio;
 const zuitl = @import("Zwrapper/util_wrapper.zig").Zutil;
-const os = @import("Os/os_core.zig");
+const Os = @import("RTOS/os.zig");
+const Mutex = Os.Mutex;
+const EventGroup = Os.EventGroup;
+const OsError = Os.OsError;
+const Sem = Os.Semaphore;
+const MsgQueue = Os.createMsgQueueType(.{ .MsgType = LedMsg, .buffer_size = 3 });
 
-const std = @import("std");
+const blink_time = 500;
 
-fn task() callconv(.C) void {
-    const led = zgpio{ .m_port = hal.GPIOC, .m_pin = hal.GPIO_PIN_13 };
+const TestType = enum {
+    mutex,
+    semaphore,
+    event_group,
+    msg_q,
+};
+
+const test_type = TestType.mutex;
+
+var led_mutex = Mutex.create_mutex("led_mutex");
+var sem = Sem.create_semaphore(.{ .name = "led_semaphore", .inital_value = 2 });
+var event_group = EventGroup.createEventGroup(.{ .name = "led_event_group" });
+var msg_queue = MsgQueue.createQueue(.{ .name = "led_msg", .inital_val = LedMsg.off });
+
+const LedMsg = enum { toggle, on, off };
+
+fn idleTask() !void {
+    var led = zgpio{ .m_port = hal.GPIOC, .m_pin = hal.GPIO_PIN_13 };
     while (true) {
         led.TogglePin();
-        os._delay(500);
+        zuitl.delay(100);
     }
 }
 
-fn task2() callconv(.C) void {
-    const led = zgpio{ .m_port = hal.GPIOA, .m_pin = hal.GPIO_PIN_6 };
+fn task1() !void {
+    var myLed: zgpio = .{ .m_port = hal.GPIOA, .m_pin = hal.GPIO_PIN_6 };
     while (true) {
-        led.TogglePin();
-        os._delay(100);
+        switch (test_type) {
+            .event_group => {
+                _ = try event_group.awaitEvent(.{ .event_mask = 0b01, .PendOn = .any_set });
+                try event_group.writeEvent(.{ .event = 0b00 });
+                myLed.TogglePin();
+            },
+            .msg_q => {
+                const msg = try msg_queue.awaitMsg(.{});
+                switch (msg) {
+                    .on => myLed.WritePin(.Set),
+                    .off => myLed.WritePin(.Reset),
+                    .toggle => myLed.TogglePin(),
+                }
+            },
+            .mutex => {
+                try mutex_blink(&myLed);
+            },
+            .semaphore => {
+                try semaphore_blink(&myLed);
+            },
+        }
     }
 }
 
-fn task3() callconv(.C) void {
-    const led = zgpio{ .m_port = hal.GPIOA, .m_pin = hal.GPIO_PIN_8 };
+fn task2() !void {
+    var myLed: zgpio = .{ .m_port = hal.GPIOA, .m_pin = hal.GPIO_PIN_8 };
     while (true) {
-        led.TogglePin();
-        os._delay(200);
+        switch (test_type) {
+            .event_group => {
+                _ = try event_group.awaitEvent(.{ .event_mask = 0b10, .PendOn = .any_set });
+                try event_group.writeEvent(.{ .event = 0b00 });
+                myLed.TogglePin();
+            },
+            .msg_q => {
+                try msg_queue.pushMsg(LedMsg.off);
+                try Os.Time.delay(blink_time);
+                try msg_queue.pushMsg(LedMsg.on);
+                try Os.Time.delay(blink_time);
+            },
+            .mutex => {
+                try mutex_blink(&myLed);
+            },
+            .semaphore => {
+                try semaphore_blink(&myLed);
+            },
+        }
     }
 }
 
-fn task4() callconv(.C) void {
-    const led = zgpio{ .m_port = hal.GPIOA, .m_pin = hal.GPIO_PIN_9 };
+fn task3() !void {
+    var myLed: zgpio = .{ .m_port = hal.GPIOA, .m_pin = hal.GPIO_PIN_9 };
     while (true) {
-        led.TogglePin();
-        os._delay(300);
+        switch (test_type) {
+            .event_group => {
+                try event_group.writeEvent(.{ .event = 0b01 });
+                try Os.Time.delay(blink_time);
+                try event_group.writeEvent(.{ .event = 0b10 });
+                try Os.Time.delay(blink_time);
+            },
+            .msg_q => {
+                try tcb3.suspendMe();
+            },
+            .mutex => {
+                try mutex_blink(&myLed);
+            },
+            .semaphore => {
+                try semaphore_blink(&myLed);
+            },
+        }
     }
 }
 
-fn task5() callconv(.C) void {
-    const led = zgpio{ .m_port = hal.GPIOA, .m_pin = hal.GPIO_PIN_10 };
-    while (true) {
-        led.TogglePin();
-        os._delay(400);
-    }
+fn mutex_blink(gpio: *zgpio) !void {
+    try led_mutex.acquire(.{});
+    const led = gpio;
+    led.TogglePin();
+    try Os.Time.delay(blink_time);
+    try led_mutex.release();
+    try Os.Time.delay(blink_time);
 }
 
-fn task6() callconv(.C) void {
-    const led = zgpio{ .m_port = hal.GPIOA, .m_pin = hal.GPIO_PIN_11 };
-    while (true) {
-        led.TogglePin();
-        os._delay(500);
-    }
+fn semaphore_blink(gpio: *zgpio) !void {
+    try sem.acquire(.{});
+    gpio.TogglePin();
+    try Os.Time.delay(blink_time);
+    try sem.release();
+    try Os.Time.delay(1);
 }
 
-fn task7() callconv(.C) void {
-    const led = zgpio{ .m_port = hal.GPIOA, .m_pin = hal.GPIO_PIN_12 };
-    while (true) {
-        led.TogglePin();
-        os._delay(600);
-    }
+const stackSize = 500;
+var stack1: [stackSize]u32 = [_]u32{0xDEADC0DE} ** stackSize;
+var stack2: [stackSize]u32 = [_]u32{0xDEADC0DE} ** stackSize;
+var stack3: [stackSize]u32 = [_]u32{0xDEADC0DE} ** stackSize;
+
+var tcb1 = Os.create_task(.{
+    .name = "task1",
+    .priority = 1,
+    .stack = &stack1,
+    .subroutine = &task1,
+    //    .subroutineErrHandler = &errorHandler,
+});
+
+fn errorHandler(err: anyerror) void {
+    if (err == OsError.Aborted) {}
 }
 
-fn _idle_task_handler() callconv(.C) void {
-    while (true) {
-        //idle
-        //add a call back for the user to set
-    }
-}
+var tcb2 = Os.create_task(.{
+    .name = "task2",
+    .priority = 2,
+    .stack = &stack2,
+    .subroutine = &task2,
+});
+
+var tcb3 = Os.create_task(.{
+    .name = "task3",
+    .priority = 3,
+    .stack = &stack3,
+    .subroutine = &task3,
+});
 
 export fn main() void {
     _ = hal.HAL_Init();
@@ -78,125 +167,39 @@ export fn main() void {
     _ = hal.MX_TIM3_Init();
     _ = hal.MX_TIM4_Init();
 
-    const stackSize = 50;
-    var stack: [stackSize]u32 = [_]u32{0xDEADC0DE} ** stackSize;
-    var stack2: [stackSize]u32 = [_]u32{0xDEADC0DE} ** stackSize;
-    var stack3: [stackSize]u32 = [_]u32{0xDEADC0DE} ** stackSize;
-    var stack4: [stackSize]u32 = [_]u32{0xDEADC0DE} ** stackSize;
-    var stack5: [stackSize]u32 = [_]u32{0xDEADC0DE} ** stackSize;
-    var stack6: [stackSize]u32 = [_]u32{0xDEADC0DE} ** stackSize;
-    var stack7: [stackSize]u32 = [_]u32{0xDEADC0DE} ** stackSize;
-    var _idle_stack: [stackSize]u32 = [_]u32{0xDEADC0DE} ** stackSize;
+    tcb1.init();
+    tcb2.init();
+    tcb3.init();
 
-    var tcb1 = os.os_priorityQ.TaskCtrlBlk{
-        .stack = &stack,
-        .stack_ptr = @intFromPtr(&stack[stack.len - 16]),
-        .task_handler = &task,
-        .priority = 5,
-        .blocked_time = 0,
-        .towardHead = null,
-        .towardTail = null,
-    };
+    sem.init();
+    event_group.init();
+    msg_queue.init();
+    led_mutex.init();
 
-    var tcb2 = os.os_priorityQ.TaskCtrlBlk{
-        .stack = &stack2,
-        .stack_ptr = @intFromPtr(&stack2[stack2.len - 16]),
-        .task_handler = &task2,
-        .priority = 5,
-        .blocked_time = 0,
-        .towardHead = null,
-        .towardTail = null,
-    };
+    Os.init();
+    Os.startOS(.{
+        .idle_task_subroutine = &idleTask,
+        .idle_stack_size = 25,
+        .sysTick_callback = &incTick,
+    });
 
-    var tcb3 = os.os_priorityQ.TaskCtrlBlk{
-        .stack = &stack3,
-        .stack_ptr = @intFromPtr(&stack3[stack3.len - 16]),
-        .task_handler = &task3,
-        .priority = 5,
-        .blocked_time = 0,
-        .towardHead = null,
-        .towardTail = null,
-    };
-
-    var tcb4 = os.os_priorityQ.TaskCtrlBlk{
-        .stack = &stack4,
-        .stack_ptr = @intFromPtr(&stack4[stack4.len - 16]),
-        .task_handler = &task4,
-        .priority = 6,
-        .blocked_time = 0,
-        .towardHead = null,
-        .towardTail = null,
-    };
-
-    var tcb5 = os.os_priorityQ.TaskCtrlBlk{
-        .stack = &stack5,
-        .stack_ptr = @intFromPtr(&stack5[stack5.len - 16]),
-        .task_handler = &task5,
-        .priority = 6,
-        .blocked_time = 0,
-        .towardHead = null,
-        .towardTail = null,
-    };
-
-    var tcb6 = os.os_priorityQ.TaskCtrlBlk{
-        .stack = &stack6,
-        .stack_ptr = @intFromPtr(&stack6[stack6.len - 16]),
-        .task_handler = &task6,
-        .priority = 6,
-        .blocked_time = 0,
-        .towardHead = null,
-        .towardTail = null,
-    };
-
-    var tcb7 = os.os_priorityQ.TaskCtrlBlk{
-        .stack = &stack7,
-        .stack_ptr = @intFromPtr(&stack7[stack7.len - 16]),
-        .task_handler = &task7,
-        .priority = 13,
-        .blocked_time = 0,
-        .towardHead = null,
-        .towardTail = null,
-    };
-
-    var idleTask = os.os_priorityQ.TaskCtrlBlk{
-        .stack = &_idle_stack,
-        .stack_ptr = @intFromPtr(&_idle_stack[_idle_stack.len - 16]),
-        .task_handler = &_idle_task_handler,
-        .priority = 31,
-        .blocked_time = 0,
-        .towardHead = null,
-        .towardTail = null,
-    };
-
-    os._addTaskToOs(&idleTask);
-    os._addTaskToOs(&tcb1);
-    os._addTaskToOs(&tcb2);
-    os._addTaskToOs(&tcb3);
-    os._addTaskToOs(&tcb4);
-    os._addTaskToOs(&tcb5);
-    os._addTaskToOs(&tcb6);
-    os._addTaskToOs(&tcb7);
-
-    os._startOS();
+    unreachable;
 }
 
-var pcCom = zuart{ .m_uart_handle = &hal.huart2 };
+extern var uwTick: c_uint;
+fn incTick() void {
+    uwTick += 1;
+}
 
+const std = @import("std");
 const builtin = @import("builtin");
 pub fn panic(msg: []const u8, _: ?*std.builtin.StackTrace, _: ?usize) noreturn {
-    asm volatile ("BKPT");
-
-    pcCom.writeBlocking("--Panic--\n", 500) catch blk: {
-        break :blk;
-    };
-    pcCom.writeBlocking(msg, 500) catch blk: {
-        break :blk;
-    };
-    pcCom.writeBlocking("\n", 500) catch blk: {
-        break :blk;
-    };
+    var pcCom = zuart{ .m_uart_handle = &hal.huart2 };
+    pcCom.writeBlocking("--Panic--\n", 50) catch {};
+    pcCom.writeBlocking(msg, 250) catch {};
+    pcCom.writeBlocking("\n", 50) catch {};
 
     while (true) {
-        asm volatile ("BKPT");
+        //@breakpoint();
     }
 }
