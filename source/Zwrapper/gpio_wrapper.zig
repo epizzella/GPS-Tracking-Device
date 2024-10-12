@@ -15,7 +15,7 @@ pub const Zgpio = struct {
     }
 
     pub fn WritePin(self: *Zgpio, pinState: ZpinState) void {
-        hal.HAL_GPIO_WritePin(self.m_port, self.m_pin, pinState);
+        hal.HAL_GPIO_WritePin(self.m_port, self.m_pin, @intFromEnum(pinState));
     }
 
     pub fn TogglePin(self: *Zgpio) void {
