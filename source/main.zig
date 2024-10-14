@@ -18,7 +18,7 @@ const TestType = enum {
     msg_q,
 };
 
-const test_type = TestType.mutex;
+const test_type = TestType.event_group;
 
 var led_mutex = Mutex.create_mutex("led_mutex");
 var sem = Sem.create_semaphore(.{ .name = "led_semaphore", .inital_value = 2 });
