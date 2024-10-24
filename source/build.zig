@@ -39,12 +39,14 @@ pub fn build(b: *std.Build) void {
         .linkage = .static,
     });
 
+    //    elf.entry = .disabled;
+
     //#defines for STM32 HAL
     elf.defineCMacro("USE_HAL_DRIVER", "");
     elf.defineCMacro("STM32F103xB", "");
 
     elf.addAssemblyFile(.{ .src_path = .{ .owner = b, .sub_path = "startup_stm32f103xb.S" } });
-    elf.addAssemblyFile(.{ .src_path = .{ .owner = b, .sub_path = "RTOS/source/arch/arm-cortex-m/armv7-m/arch.S" } });
+    //elf.addAssemblyFile(.{ .src_path = .{ .owner = b, .sub_path = "RTOS/source/arch/arm-cortex-m/armv7-m/arch.S" } });
     elf.setLinkerScript(.{ .src_path = .{ .owner = b, .sub_path = "STM32F103C8Tx_FLASH.ld" } });
     //elf.setVerboseLink(true);
     //b.verbose_link = true;
@@ -60,11 +62,11 @@ pub fn build(b: *std.Build) void {
         "-mfloat-abi=soft", //Software floating point
         "-ffreestanding", //In freestanding mode, the only available standard header files are: <float.h>, <iso646.h>, <limits.h>, <stdarg.h>, <stdbool.h>, <stddef.h>, and <stdint.h>
         //"-Wl,--verbose,-Map=bin/gps.map", //not giving me a map file for some reason
-        "-ffunction-sections",
-        "-fdata-sections",
+        //"-ffunction-sections",
+        //"-fdata-sections",
         "-nostdlib",
         "-nostdinc",
-        //    "-gdwarf-2",
+        //"-gdwarf-2",
     };
 
     const stm32f1_hal_src = [_][]const u8{
